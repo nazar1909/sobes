@@ -1,0 +1,19 @@
+{% extends 'main/layout.html' %}
+{% load static %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<img class="main-image" src="{% static 'media/images/kyiv-0.jpg' %}" alt="Опис фото" />
+<div class="container mt-3 mycon" style="color: white; background-color: #281422;">
+    <h1>Знайди для себе</h1>
+
+<!-- Пошук праворуч від панелі -->
+<div class="search-outside" style="background-color: #281422">
+    <form class="d-flex" role="search" action="/search" method="GET">
+        <input class="form-control me-2" type="search" style="color: white"     placeholder="Пошук" aria-label="Search" name="q">
+        <button class="btn btn-outline-light " style="text-decoration-color: white" type="submit">Пошук</button>
+    </form>
+</div>
+</div>
+{% endblock %}

@@ -1,0 +1,16 @@
+{% extends 'main/layout.html' %}
+{% load static %}
+
+{% block title %}Увійти{% endblock %}
+
+{% block content %}
+<h1 style="text-align: center">Увійти</h1>
+<form method="post" style="margin-left: 200px">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit" class="btn btn-primary" style="margin-left: 200px">Увійти</button>
+    <a href="{% url 'register' %}" class="btn btn-link" style="margin-left: 200px">Зареєструватись</a>
+    <a href="{% url 'password_change' %}" class="btn btn-link" style="margin-left: 200px">Забули пароль?</a>
+
+</form>
+{% endblock %}

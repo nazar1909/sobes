@@ -1,0 +1,65 @@
+.my-navbar {
+    position: fixed;
+    top: -5px;
+    left: 0;
+    width: 100px;
+    height: 100vh;
+    background-color: #281422;
+    display: flex;
+    flex-direction: column;
+    padding: 20px 10px;
+    z-index: 1000;
+    color: white;
+
+}
+
+/* Посилання */
+.my-navbar .nav-link,
+.my-navbar  {
+    color: white;
+    text-decoration: none;
+    margin: 5px 0;
+    padding-bottom: 100px;
+}
+
+/* Dropdown меню */
+.my-navbar .dropdown-menu {
+    background-color: #281422;
+    display: none;
+    position: absolute;
+}
+
+.my-navbar .nav-item.dropdown:hover .dropdown-menu {
+    display: block;
+}
+
+/* Логотип */
+.my-navbar .navbar-brand {
+    text-align: center;
+    margin-bottom: 20px;
+
+}
+
+.search-outside {
+    position: absolute;
+    top: 80px;
+    left: 340px; /* відступ праворуч від панелі */
+    width: 950px;
+    background-color: white;
+    padding: 5px;
+    border-radius: 5px;
+    z-index: 900;
+    text-align: center;
+}
+.mycon{
+    text-align: center;
+}
+.main-image{
+    width: 100%;
+    height: auto;
+    border-radius: 1px;
+     position: absolute;   /* */
+    top: 0;
+    left: 0;
+    z-index: -1;
+}

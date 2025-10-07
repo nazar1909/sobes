@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ ad.title }}</title>
+</head>
+<body>
+    <h1>{{ ad.title }}</h1>
+    <p>{{ ad.description }}</p>
+    <p>Опис: {{ ad.body }}</p>
+    <p>Ціна: {{ ad.price }}</p>
+    <p>Автор: {{ ad.user.username }}</p>
+    <a href="{% url 'order_ad' ad.id %}">Замовити</a>
+
+</body>
+</html>

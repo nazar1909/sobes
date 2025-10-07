@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <title>Список оголошень</title>
+</head>
+<body>
+    <h1>Список оголошень</h1>
+    <ul>
+        {% for ad in ads %}
+            <li><a href="{% url 'ad_detail' ad.pk %}">{{ ad.title }}</a></li>
+        {% empty %}
+            <li>Оголошень немає.</li>
+        {% endfor %}
+    </ul>
+</body>
+</html>
