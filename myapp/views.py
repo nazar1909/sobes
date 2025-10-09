@@ -14,6 +14,7 @@ def home(request):
     ads = AD.objects.all()
     return render(request, 'main/index.html',{'ads': ads})
 
+
 def register(request):
     if request.method == "POST":
         form = CustomUserCreationForm(request.POST)
