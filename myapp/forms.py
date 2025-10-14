@@ -16,9 +16,6 @@ class CustomUserCreationForm(UserCreationForm):
             raise ValidationError("error")
         return username
 
-
-
-
     class Meta:
         model = User
         fields = ( "username", "email", "password1", "password2")
@@ -32,3 +29,7 @@ class OrderForm(forms.Form):
     name = forms.CharField(label="Ім’я", max_length=100)
     email = forms.EmailField(label="Електронна пошта")
     phone = forms.CharField(label="Номер телефону", max_length=20)
+
+
+class PasswordResetForm(forms.Form):
+    email = forms.EmailField(label="Електронна пошта")
