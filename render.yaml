@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: sobes-app
+    env: python
+    plan: free
+    buildCommand: ""
+    startCommand: "python manage.py migrate && python manage.py runserver 0.0.0.0:8000"
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: sobes-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          name: sobes-redis
+          type: redis
+
+databases:
+  - name: sobes-db
+
+redis:
+  - name: sobes-redis
