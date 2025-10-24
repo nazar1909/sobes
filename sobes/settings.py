@@ -5,6 +5,9 @@ Django settings for sobes project.
 from pathlib import Path
 import os
 from django.core.exceptions import ImproperlyConfigured
+import dj_database_url
+
+
 
 # ==============================================================================
 # 1. ДОПОМІЖНА ФУНКЦІЯ ДЛЯ ЗЧИТУВАННЯ ЗМІННИХ СЕРЕДОВИЩА
@@ -91,14 +94,7 @@ POSTGRES_HOST = get_env_variable('POSTGRES_HOST', 'db') # 'db' - це ім'я с
 POSTGRES_PORT = get_env_variable('POSTGRES_PORT', '5432')
 
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': get_env_variable('POSTGRES_DB'),
-        'USER': get_env_variable('POSTGRES_USER'),
-        'PASSWORD': get_env_variable('POSTGRES_PASSWORD'),
-        'HOST': POSTGRES_HOST,
-        'PORT': POSTGRES_PORT,
-    }
+    'default': dj_database_url.parse(os.environ.get('DATABASE_URL'))
 }
 
 
