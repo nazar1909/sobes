@@ -1,17 +1,25 @@
-<!DOCTYPE html>
-<html lang="uk">
-<head>
-    <meta charset="UTF-8">
-    <title>Список оголошень</title>
-</head>
-<body>
+{% extends 'main/layout.html' %}
+{% load static %}
+
+{% block title %}Список оголошень{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
     <h1>Список оголошень</h1>
-    <ul>
+    <div class="row">
         {% for ad in ads %}
-            <li><a href="{% url 'ad_detail' ad.pk %}">{{ ad.title }}</a></li>
+            <div class="col-md-4 mb-3">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">{{ ad.title }}</h5>
+                        <p class="card-text">Ціна: {{ ad.price }} грн</p>
+                        <a href="{% url 'ad_detail' ad.pk %}" class="btn btn-primary">Детальніше</a>
+                    </div>
+                </div>
+            </div>
         {% empty %}
-            <li>Оголошень немає.</li>
+            <p>Оголошень немає.</p>
         {% endfor %}
-    </ul>
-</body>
-</html>
+    </div>
+</div>
+{% endblock %}

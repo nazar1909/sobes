@@ -1,13 +1,18 @@
 {% extends 'main/layout.html' %}
 {% load static %}
 
+{% block title %}Замовлення: {{ ad.title }}{% endblock %}
+
 {% block content %}
 <div class="container mt-5">
-    <h2 class="mb-4">Додати оголошення </h2>
-    <form method="post" enctype="multipart/form-data">
+    <h2>Замовлення оголошення: {{ ad.title }}</h2>
+    <p>Ви збираєтесь купити товар у {{ ad.seller.username }}.</p>
+    <hr>
+
+    <form method="post">
         {% csrf_token %}
-        {{ form.as_p }}
-        <button type="submit" class="btn btn-primary">Додати</button>
+        <p>Підтвердіть замовлення. Автор зв'яжеться з вами.</p>
+        <button type="submit" class="btn btn-success">Підтвердити замовлення</button>
     </form>
 </div>
 {% endblock %}

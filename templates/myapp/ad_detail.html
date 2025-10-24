@@ -1,15 +1,27 @@
-<!DOCTYPE html>
-<html lang="uk">
-<head>
-    <meta charset="UTF-8">
-    <title>{{ ad.title }}</title>
-</head>
-<body>
+{% extends 'main/layout.html' %}
+{% load static %}
+
+{% block title %}{{ ad.title }}{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
     <h1>{{ ad.title }}</h1>
-    <p>{{ ad.description }}</p>
-    <p>Опис: {{ ad.body }}</p>
-    <p>Ціна: {{ ad.price }}</p>
-    <p>Автор: {{ ad.user.username }}</p>
-    <a href="{% url 'order_ad' ad.id %}">Замовити</a>
-</body>
-</html>
+    <p class="lead">Автор: {{ ad.seller.username }}</p>
+    <hr>
+    
+    <h3>Опис:</h3>
+    <p>{{ ad.body }}</p>
+    
+    <h2 class="text-success">Ціна: {{ ad.price }} грн</h2>
+    
+    {% if not ad.is_sold and ad.seller != user %}
+        <a href="{% url 'order_ad' ad.id %}" class="btn btn-success btn-lg">
+            <i class="fa fa-shopping-cart"></i> Замовити
+        </a>
+    {% elif ad.is_sold %}
+        <p class="text-danger">Цей товар вже продано.</p>
+    {% elif ad.seller == user %}
+        <p class="text-info">Це ваше власне оголошення.</p>
+    {% endif %}
+</div>
+{% endblock %}
