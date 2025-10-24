@@ -1,40 +1,90 @@
-# docker-compose.yml
-
 version: '3.8'
 
 services:
-  # Сервіс бази даних PostgreSQL
+  # 1. Сервіс Бази Даних PostgreSQL
   db:
-    image: postgres:13-alpine # Використовуємо готовий образ Postgres
+    image: postgres:14-alpine
     volumes:
-      - postgres_data:/var/lib/postgresql/data/ # Зберігаємо дані, щоб вони не зникали
+      - postgres_data:/var/lib/postgresql/data/
     environment:
-      - POSTGRES_USER=hello_django
-      - POSTGRES_PASSWORD=hello_django
+      # Встановіть змінні для доступу (вони будуть використовуватися web/celery)
       - POSTGRES_DB=hello_django_dev
-    ports:
-      - "5432:5432" # Прокидаємо порт, щоб можна було підключитись до БД з комп'ютера
-
-  # Ваш існуючий сервіс Redis
-  redis:
-    image: redis:alpine # Використовуємо готовий образ Redis
-    ports:
-      - "6380:6379" # Прокидаємо порт Redis
-
-  # Сервіс вашого Django-проєкту
-  web:
-    build: . # Кажемо Docker зібрати образ з Dockerfile у поточній папці
-    command: python manage.py runserver 0.0.0.0:8000 # Команда для запуску сервера
-    volumes:
-      - .:/app # Синхронізуємо код з контейнером, щоб зміни одразу застосовувались
-    ports:
-      - "8000:8000" # Прокидаємо порт 8000
-    environment:
-      - POSTGRES_NAME=hello_django_dev
       - POSTGRES_USER=hello_django
       - POSTGRES_PASSWORD=hello_django
-    depends_on: # Вказуємо, що наш проєкт залежить від бази даних
+    ports:
+      - "5432:5432"
+
+  # 2. Сервіс Кешування Redis (для Celery Backend)
+  redis:
+    image: redis:alpine
+    ports:
+      - "6381:6379" # 6379 - стандартний порт Redis
+
+  # 3. Сервіс Брокера Повідомлень RabbitMQ (для Celery Broker)
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    ports:
+      - "5672:5672" # Стандартний порт для обміну повідомленнями
+      - "15672:15672" # Порт для Web UI (http://localhost:15672/)
+    environment:
+      # Стандартні облікові дані для адмін-панелі
+      RABBITMQ_DEFAULT_USER: user
+      RABBITMQ_DEFAULT_PASS: password
+
+  # 4. Основний Додаток Django (Web Server)
+  web:
+    build: .
+    # ВИПРАВЛЕННЯ: Використовуємо wait-for-it для очікування бази даних
+    # Прибрано 'makemigrations'
+    command: >
+      sh -c "python manage.py wait_for_db 
+      && python manage.py migrate 
+      && python manage.py runserver 0.0.0.0:8000"
+    volumes:
+      - .:/app
+    ports:
+      - "8000:8000"
+    environment:
+      # ЯВНО ВСТАНОВЛЮЄМО ШЛЯХ ДО НАЛАШТУВАНЬ, щоб уникнути помилок
+      - DJANGO_SETTINGS_MODULE=sobes.settings
+
+      # Змінні для підключення до БД (використовуйте ім'я сервісу як хост)
+      - POSTGRES_DB=hello_django_dev
+      - POSTGRES_USER=hello_django
+      - POSTGRES_PASSWORD=hello_django
+      - POSTGRES_HOST=db
+      - POSTGRES_PORT=5432 # Додаємо порт
+
+      # Змінні для Celery/Redis/RabbitMQ
+      - REDIS_HOST=redis
+      - RABBITMQ_HOST=rabbitmq
+    depends_on:
       - db
+      - redis
+      - rabbitmq
+
+  # 5. Celery Worker (для виконання фонових завдань)
+  celery:
+    build: .
+    # ВИПРАВЛЕННЯ: Додаємо логіку очікування DB, щоб Celery не запускався раніше міграцій
+    command: >
+      sh -c "python manage.py wait_for_db 
+      && celery -A sobes worker -l info"
+    volumes:
+      - .:/app
+    environment:
+      - DJANGO_SETTINGS_MODULE=sobes.settings
+      - REDIS_HOST=redis
+      - RABBITMQ_HOST=rabbitmq
+      - POSTGRES_HOST=db
+      - POSTGRES_PORT=5432
+      - POSTGRES_DB=hello_django_dev
+      - POSTGRES_USER=hello_django
+      - POSTGRES_PASSWORD=hello_django
+    depends_on:
+      - web # Celery залежить від web, щоб переконатися, що міграції виконані
+      - redis
+      - rabbitmq
 
 volumes:
-  postgres_data: # Оголошуємо том для зберігання даних БД
+  postgres_data:
