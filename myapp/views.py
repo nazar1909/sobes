@@ -1,20 +1,28 @@
 from django.shortcuts import render,redirect,get_object_or_404
-from .forms import CustomUserCreationForm
-import re
+from .forms import RegistrationForm
+from django.utils.html import escape
 from django.contrib.auth import login
 from django.urls import reverse
 from .forms import AdForm
 from django.contrib.auth.decorators import login_required
-from .models import AD
+from .models import AD,Profile
 from django.core.mail import send_mail
 from django.conf import settings
-from .forms import OrderForm,PasswordResetForm
+from .forms import OrderForm,PasswordResetForm,AdImageFormSet
 from django.utils.http import urlsafe_base64_encode
 from django.contrib.auth.tokens import default_token_generator
 from django.utils.encoding import force_bytes
 from django.contrib.auth.models import User
-from django.core.cache import cache
-
+from django.http import HttpResponseForbidden,HttpResponse,HttpResponseBadRequest
+from django.http import JsonResponse
+from django.contrib.auth.forms import UserCreationForm
+from django import forms
+from django.contrib.auth import get_user_model, update_session_auth_hash
+from django.utils.http import urlsafe_base64_decode
+from django.shortcuts import render, redirect
+from django.contrib.auth.forms import SetPasswordForm
+from django.contrib import messages
+from .forms import ProfileForm
 # Create your views here.
 def home(request):
     ads = AD.objects.all()
@@ -22,42 +30,36 @@ def home(request):
 
 
 def register(request):
-    if request.method == "POST":
-        form = CustomUserCreationForm(request.POST)
+    if request.method == 'POST':
+        form = RegistrationForm(request.POST)
+
         if form.is_valid():
             user = form.save()
             login(request, user)
-            print("Logged in:", request.user.username)
-            return redirect("home")
+            return redirect('home')  # якщо успішно — перенаправлення
 
+        # якщо форма невалідна — залишаємо користувача на сторінці
+        # і Django сам передасть помилки у форму
+        else:
+            print(form.errors)  # для дебагу (потім можна видалити)
     else:
-        form = CustomUserCreationForm()
-    return render(request, "registration/register.html", {"form": form})
+        form = RegistrationForm()
 
-@login_required
-def ad_create(request):
-    if request.method == "POST":
-        form = AdForm(request.POST, request.FILES)
-        if form.is_valid():
-            ad = form.save(commit=False)
-            ad.user = request.user   # Прив’язка до автора
-            ad.save()
-            return redirect("home")
-
-    else:
-        form = AdForm()
-    return render(request, "myapp/ad_form.html", {"form": form})
-
+    return render(request, 'registration/register.html', {'form': form})
 
 
 def listing_detail(request,):
     ads = AD.objects.all()
     return render(request, "myapp/listing_detail.html", {"ads": ads})
 
-def ad_detail(request, pk):
-    ad = get_object_or_404(AD, pk=pk)
+def ad_detail(request, slug):
+    ad = get_object_or_404(AD, slug=slug)
+    images=ad.images.all()
     return render(request, "myapp/ad_detail.html", {"ad": ad})
-
+@login_required
+def favorite_ads(request):
+    ads = request.user.favorite_ads.all()  # через many-to-many
+    return render(request, 'myapp/favorite_ads.html', {'ads': ads})
 def order_ad(request, ad_id):
     ad = AD.objects.get(pk=ad_id)
 
@@ -142,13 +144,179 @@ def password_reset_done_view(request):
     return render(request, 'registration/password_reset_done.html')
 
 
-def password_reset_confirm_view(request, uidb64=None, token=None):
-    """Сторінка, яка перевіряє посилання і дозволяє скинути пароль."""
-    # У реальному проекті тут буде логіка перевірки токена
-    # і форма для введення нового пароля.
-    # Для простоти ми просто покажемо, що посилання працює.
+def password_reset_confirm_view(request, uidb64, token):
+    UserModel = get_user_model()
+    try:
+        uid = urlsafe_base64_decode(uidb64).decode()
+        user = UserModel.objects.get(pk=uid)
+    except (TypeError, ValueError, OverflowError, UserModel.DoesNotExist):
+        user = None
+
+    if user is not None and default_token_generator.check_token(user, token):
+        validlink = True
+        if request.method == 'POST':
+            form = SetPasswordForm(user, request.POST)
+            if form.is_valid():
+                form.save()
+                update_session_auth_hash(request, user)  # щоб не вилогінювало після зміни
+                messages.success(request, "Пароль успішно змінено! Тепер ви можете увійти.")
+                return redirect('login')
+        else:
+            form = SetPasswordForm(user)
+    else:
+        validlink = False
+        form = None
+
+    return render(request, 'registration/password_reset_confirm.html', {
+        'form': form,
+        'validlink': validlink
+    })
+
+@login_required
+def user_profile(request):
+    try:
+        user_ads = AD.objects.filter(user=request.user).order_by('-date')
+    except AttributeError:
+        # Це просто заготовка на випадок, якщо поле називається інакше
+        # Спробуйте 'user' або перевірте models.py
+        user_ads = AD.objects.filter(user=request.user).order_by('-created_at')
+
+
+
     context = {
-        'uidb64': uidb64,
-        'token': token
+        'user_ads': user_ads
     }
-    return render(request, 'registration/password_reset_confirm.html', context)
+    return render(request, 'myapp/profile.html', context)
+
+
+# KEEP THIS FUNCTION
+@login_required
+def ad_create(request):
+    if request.method == 'POST':
+        form = AdForm(request.POST)
+        formset = AdImageFormSet(request.POST, request.FILES)
+
+        if form.is_valid() and formset.is_valid():
+            ad = form.save(commit=False)
+            ad.user = request.user
+            ad.save()  # ⬅️ Тут автоматично створюється slug у моделі!
+            ad.refresh_from_db()
+            formset.instance = ad
+            formset.save()
+
+              # 🧠 Оновлює slug після збереження
+            return redirect('ad_detail', slug=ad.slug)
+
+        else:
+            print("Form errors:", form.errors)
+            print("Formset errors:", formset.errors)
+            print("Non-form errors:", formset.non_form_errors())
+
+    else:
+        form = AdForm()
+        formset = AdImageFormSet()
+
+    return render(request, 'myapp/ad_form.html', {'form': form, 'formset': formset})
+
+
+@login_required
+def ad_deactivate(request, slug):
+    ad = get_object_or_404(AD, slug=slug)
+
+    # Перевірка, що користувач є автором
+    if request.user != ad.user:
+        return HttpResponseForbidden("Ви не можете деактивувати чуже оголошення.")
+
+    if request.method == 'POST':
+        ad.delete() # Найпростіший спосіб "деактивувати"
+        return redirect('profile') # Повертаємо на сторінку профілю
+
+    # Якщо хтось зайшов GET-запитом, нічого не робимо
+    return redirect('ad_detail', slug=ad.slug)
+
+@login_required
+def ad_edit(request, slug):
+    ad = get_object_or_404(AD, slug=slug)
+
+    # ❗ Захист — тільки власник може редагувати
+    if ad.user != request.user:
+        return redirect('ad_detail', slug=slug)  # ← без 'myapp/' !!!
+
+    if request.method == 'POST':
+        form = AdForm(request.POST, request.FILES, instance=ad)
+        formset = AdImageFormSet(request.POST, request.FILES, instance=ad)
+        if form.is_valid():
+            form.save()
+            formset.save()
+            return redirect('ad_detail', slug=ad.slug)  # ← без 'myapp/' !!!
+    else:
+        form = AdForm(instance=ad)
+        formset = AdImageFormSet(instance=ad)
+
+    return render(request, 'myapp/ad_form.html', {
+        'form': form,
+        'formset': formset,
+        'is_edit': True,  # 🧩 додатковий прапорець, щоб шаблон знав, що це редагування
+        'ad': ad
+    })
+class CustomUserCreationForm(UserCreationForm):
+    email = forms.EmailField(required=True)
+
+def validate_field(request):
+    field = request.POST.get("field")
+    value = request.POST.get("value")
+
+    form = CustomUserCreationForm({field: value})
+    form.is_valid()  # Запускаємо валідацію
+
+    errors = form.errors.get(field)
+    if errors:
+        return JsonResponse({"valid": False, "errors": errors})
+    return JsonResponse({"valid": True})
+
+@login_required
+def toggle_favorite(request, slug):
+    ad = get_object_or_404(AD, slug=slug)
+    user = request.user
+
+    if user == ad.user:
+        return JsonResponse({'success': False, 'error': 'Ви не можете вподобати власне оголошення'})
+
+    if ad.favorites.filter(id=user.id).exists():
+        ad.favorites.remove(user)
+        is_favorite = False
+    else:
+        ad.favorites.add(user)
+        is_favorite = True
+
+    favorite_count = user.favorite_ads.count()
+
+    return JsonResponse({
+        'success': True,
+        'is_favorite': is_favorite,
+        'favorite_count': favorite_count
+    })
+@login_required
+def edit_profile(request):
+    profile = request.user.profile
+    if request.method == 'POST':
+        form = ProfileForm(request.POST, request.FILES, instance=profile)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Профіль оновлено ✅")
+            return redirect('edit_profile')
+    else:
+        form = ProfileForm(instance=profile)
+
+    return render(request, 'myapp/edit_profile.html', {'form': form})
+
+
+@login_required
+def my_profile(request):
+    profile, created = Profile.objects.get_or_create(user=request.user)
+    user_ads = AD.objects.filter(user=request.user).order_by('-date')
+
+    return render(request, 'myapp/my_profile.html', {
+        'profile': profile,
+        'ads': user_ads
+    })

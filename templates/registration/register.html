@@ -1,14 +1,218 @@
-{% extends 'main/layout.html' %}
+{% extends "main/layout.html" %}
 {% load static %}
 
 {% block content %}
 <div class="container mt-5">
-    <h2 class="mb-4">Реєстрація</h2>
-    <form method="post">
+  <div class="d-flex justify-content-center">
+    <div class="form-card p-4 shadow-sm rounded-3 bg-white form-wrapper" style="width: 400px;">
+
+        <div class="form-header">
+            <img src="{% static 'media/images/olx.svg' %}" alt="OLX" class="form-logo">
+            <h2>Реєстрація</h2>
+        </div>
+
+      <form id="registration-form" method="post" novalidate>
         {% csrf_token %}
-        {{ form.as_p }}
-        <button type="submit" class="btn btn-primary">Зареєструватись</button>
-        <a href="{% url 'login' %}">Увійти</a>
-    </form>
+
+        <!-- Ім’я користувача -->
+        <div class="mb-3">
+          <label for="{{ form.username.id_for_label }}" class="form-label">Ім’я користувача</label>
+          {{ form.username }}
+          <div class="invalid-feedback d-block">
+            {% for error in form.username.errors %}{{ error }}{% endfor %}
+          </div>
+        </div>
+
+        <!-- Email -->
+        <div class="mb-3 position-relative">
+          <label for="{{ form.email.id_for_label }}" class="form-label">Email</label>
+          <div class="input-group">
+            {{ form.email }}
+          </div>
+          <div class="invalid-feedback d-block">
+            {% for error in form.email.errors %}{{ error }}{% endfor %}
+          </div>
+        </div>
+
+        <!-- Пароль -->
+        <div class="mb-3 position-relative">
+          <label for="{{ form.password1.id_for_label }}" class="form-label">Пароль</label>
+          <div class="input-group">
+            {{ form.password1 }}
+            <button type="button" class="btn btn-outline-secondary toggle-password-btn"
+              data-target="#{{ form.password1.id_for_label }}" tabindex="-1">
+              <i class="bi bi-eye"></i>
+            </button>
+          </div>
+          <div class="invalid-feedback d-block">
+            {% for error in form.password1.errors %}{{ error }}{% endfor %}
+          </div>
+        </div>
+
+        <!-- Підтвердження паролю -->
+        <div class="mb-3 position-relative">
+          <label for="{{ form.password2.id_for_label }}" class="form-label">Підтвердження паролю</label>
+          <div class="input-group">
+            {{ form.password2 }}
+            <button type="button" class="btn btn-outline-secondary toggle-password-btn"
+              data-target="#{{ form.password2.id_for_label }}" tabindex="-1">
+              <i class="bi bi-eye"></i>
+            </button>
+          </div>
+          <div class="invalid-feedback d-block">
+            {% for error in form.password2.errors %}{{ error }}{% endfor %}
+          </div>
+        </div>
+
+        <button type="submit" class="btn btn-primary w-100">Зареєструватись</button>
+
+        <div class="text-center mt-3">
+          Вже є акаунт? <a href="{% url 'login' %}" class="fw-semibold">Увійти</a>
+        </div>
+      </form>
+    </div>
+  </div>
 </div>
+
+<link rel="stylesheet"
+  href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  const form = document.querySelector('#registration-form');
+
+  // === Миттєва валідація ===
+  form.querySelectorAll('input').forEach(input => {
+    input.addEventListener('input', () => validateField(input));
+  });
+
+  // === Основна функція валідації ===
+  function validateField(input) {
+    const name = input.name;
+    const value = input.value.trim();
+    const feedback = input.closest('.mb-3').querySelector('.invalid-feedback');
+    const icon = input.nextElementSibling?.classList.contains('input-icon')
+      ? input.nextElementSibling
+      : null;
+
+    if (!feedback) return;
+
+    // ---- USERNAME ----
+    if (name === 'username') {
+      const usernameRegex = /^[A-Za-zА-Яа-яЇїІіЄєҐґ0-9]+$/;
+      const onlyDigits = /^[0-9]+$/;
+
+      if (!value) return clearField(input, feedback, icon);
+
+      if (!usernameRegex.test(value)) {
+        return setInvalid(input, feedback, icon, "Ім’я може містити лише букви або букви з цифрами");
+      }
+
+      if (onlyDigits.test(value)) {
+        return setInvalid(input, feedback, icon, "Ім’я не може складатися лише з цифр");
+      }
+
+      if (value.length < 3) {
+        return setInvalid(input, feedback, icon, "Ім’я має містити щонайменше 3 символи");
+      }
+
+      return setValid(input, feedback, icon);
+    }
+
+    // ---- EMAIL ----
+    if (name === 'email') {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!value) return clearField(input, feedback, icon);
+      if (emailRegex.test(value)) return setValid(input, feedback, icon);
+      return setInvalid(input, feedback, icon, "Некоректна адреса електронної пошти");
+    }
+
+    // ---- PASSWORD1 ----
+    if (name === 'password1') {
+      if (!value) return clearField(input, feedback, icon);
+      if (value.length >= 8) return setValid(input, feedback, icon);
+      return setInvalid(input, feedback, icon, "Пароль має містити щонайменше 8 символів");
+    }
+
+    // ---- PASSWORD2 ----
+    if (name === 'password2') {
+      const pass1 = form.querySelector('[name="password1"]').value.trim();
+      if (!value) return clearField(input, feedback, icon);
+      if (value === pass1) return setValid(input, feedback, icon);
+      return setInvalid(input, feedback, icon, "Паролі не співпадають");
+    }
+  }
+
+  // === Хелпери ===
+  function setValid(input, feedback, icon) {
+    input.classList.add('is-valid');
+    input.classList.remove('is-invalid');
+    feedback.textContent = '';
+    if (icon) icon.className = 'input-icon bi bi-check-circle-fill valid-icon';
+  }
+
+  function setInvalid(input, feedback, icon, message) {
+    input.classList.add('is-invalid');
+    input.classList.remove('is-valid');
+    feedback.textContent = message;
+    if (icon) icon.className = 'input-icon bi bi-x-circle-fill invalid-icon';
+  }
+
+  function clearField(input, feedback, icon) {
+    input.classList.remove('is-invalid', 'is-valid');
+    feedback.textContent = '';
+    if (icon) icon.className = 'input-icon bi';
+  }
+});
+
+
+
+
+document.addEventListener('DOMContentLoaded', function () {
+  // --- код валідації залишаємо як є ---
+
+  // === Логіка перемикання видимості пароля ===
+  document.querySelectorAll('.toggle-password-btn').forEach(btn => {
+    btn.addEventListener('click', function () {
+      const targetSelector = this.dataset.target;
+      const input = document.querySelector(targetSelector);
+
+      if (!input) return; // якщо не знайдено input
+
+      const isPassword = input.type === 'password';
+      input.type = isPassword ? 'text' : 'password';
+
+      // міняємо іконку
+      const icon = this.querySelector('i');
+      icon.classList.toggle('bi-eye', !isPassword);
+      icon.classList.toggle('bi-eye-slash', isPassword);
+    });
+  });
+});
+
+document.addEventListener('DOMContentLoaded', function () {
+  const password1 = document.querySelector('[name="password1"]');
+  const password2 = document.querySelector('[name="password2"]');
+
+  if (password2) {
+    // Забороняємо вставку, копіювання, вирізання
+    ['paste', 'copy', 'cut', 'drop', 'dragstart'].forEach(evt => {
+      password2.addEventListener(evt, e => e.preventDefault());
+    });
+
+    // Якщо користувач намагається вставити Ctrl+V
+    password2.addEventListener('keydown', e => {
+      if (e.ctrlKey && (e.key === 'v' || e.key === 'V')) {
+        e.preventDefault();
+      }
+    });
+
+    // Щоб не можна було автозаповнити браузером
+    password2.setAttribute('autocomplete', 'new-password');
+  }
+});
+</script>
+
+
+
 {% endblock %}

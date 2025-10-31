@@ -4,24 +4,140 @@
 {% block title %}{{ ad.title }}{% endblock %}
 
 {% block content %}
-<div class="container mt-5">
-    <h1>{{ ad.title }}</h1>
-    <p class="lead">Автор: {{ ad.seller.username }}</p>
-    <hr>
-    
-    <h3>Опис:</h3>
-    <p>{{ ad.body }}</p>
-    
-    <h2 class="text-success">Ціна: {{ ad.price }} грн</h2>
-    
-    {% if not ad.is_sold and ad.seller != user %}
-        <a href="{% url 'order_ad' ad.id %}" class="btn btn-success btn-lg">
-            <i class="fa fa-shopping-cart"></i> Замовити
-        </a>
-    {% elif ad.is_sold %}
-        <p class="text-danger">Цей товар вже продано.</p>
-    {% elif ad.seller == user %}
-        <p class="text-info">Це ваше власне оголошення.</p>
-    {% endif %}
-</div>
+<div class="container-fluid ad-detail-page">
+    <div class="row">
+
+        <div class="col-lg-8">
+
+            <nav aria-label="breadcrumb" class="mb-2">
+                <ol class="breadcrumb bg-light p-2 rounded">
+                    <li class="breadcrumb-item"><a href="{% url 'listing_detail' %}">Всі оголошення</a></li>
+
+                    <li class="breadcrumb-item active" aria-current="page">{{ ad.title }}</li>
+                </ol>
+            </nav>
+
+            {# --- БЛОК ГАЛЕРЕЇ ЗОБРАЖЕНЬ --- #}
+            <div class="card shadow-sm mb-4">
+                <div class="card-body p-2">
+                    {% if ad.images.all %}
+                        <div id="adCarousel" class="carousel slide" data-bs-ride="carousel">
+                            <div class="carousel-inner rounded">
+                                {% for image in ad.images.all %}
+                                    <div class="carousel-item {% if forloop.first %}active{% endif %}">
+                                        <img src="{{ image.image.url }}" class="d-block w-100 ad-detail-image" alt="{{ ad.title }}">
+                                    </div>
+                                {% endfor %}
+                            </div>
+                            {% if ad.images.all.count > 1 %}
+                                <button class="carousel-control-prev" type="button" data-bs-target="#adCarousel" data-bs-slide="prev">
+                                    <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                                    <span class="visually-hidden">Previous</span>
+                                </button>
+                                <button class="carousel-control-next" type="button" data-bs-target="#adCarousel" data-bs-slide="next">
+                                    <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                                    <span class="visually-hidden">Next</span>
+                                </button>
+                            {% endif %}
+                        </div>
+                    {% else %}
+                        {# ВИПРАВЛЕНО ШЛЯХ: static 'images/placeholder.png' #}
+                        <img src="{% static 'media/images/placeholder.png' %}" class="img-fluid rounded ad-detail-image" alt="Немає фото">
+                    {% endif %}
+                </div>
+            </div>
+            {# --- КІНЕЦЬ БЛОКУ ГАЛЕРЕЇ ЗОБРАЖЕНЬ --- #}
+
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-white border-0 pt-3">
+                    <ul class="nav nav-tabs">
+                        <li class="nav-item">
+                            <a class="nav-link active" href="#">Опис</a>
+                        </li>
+                    </ul>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex flex-wrap gap-3 text-muted small mb-3">
+                        <span><i class="fa-solid fa-user me-1"></i> Приватна особа</span>
+                        {# Приклад: Стан оголошення, якщо є в моделі #}
+                        {# <span><i class="fa-solid fa-star me-1"></i> Стан: {{ ad.condition|default:"Вживане" }}</span> #}
+                        <span><i class="fa-solid fa-tag me-1"></i> Марка: {{ ad.brand|default:"Інша" }}</span>
+                    </div>
+
+                    <h5 class="mb-3">Опис</h5>
+                    {# ВИПРАВЛЕНО: ad.body замість ad.description #}
+                    <p class="card-text" style="white-space: pre-wrap;">{{ ad.body|default:"Опис відсутній." }}</p>
+
+                    <hr>
+                    <div class="d-flex justify-content-between text-muted small">
+                        {# <span>ID: {{ ad.id }}</span> #}
+                        {# Приклад: Реальна кількість переглядів #}
+                        <span>Переглядів: {{ ad.views|default:"0" }}</span>
+                    </div>
+                </div>
+            </div>
+
+        </div> {# ЗАКРИТИЙ ТЕГ: <div class="col-lg-8"> #}
+
+        <div class="col-lg-4">
+
+            <div class="card shadow-sm mb-3">
+                <div class="card-body">
+                    <h1 class="h3 ad-detail-title">{{ ad.title }}</h1>
+                    {# ВИПРАВЛЕНО: формат ціни #}
+                    <h2 class="h1 ad-detail-price">{{ ad.price }} грн</h2>
+                </div>
+            </div>
+
+            <a href="#" class="btn btn-primary-dark w-100 btn-lg mb-3">
+                <i class="fa-solid fa-shield-halved me-2"></i> Купити з доставкою
+            </a>
+
+            <div class="card shadow-sm mb-3">
+                <div class="card-body">
+                    <h5 class="card-title h6 mb-3">Способи доставки</h5>
+                    <ul class="list-unstyled delivery-list">
+                        <li><i class="fa-solid fa-truck-fast text-danger"></i> <span>від 19 грн. - Укрпошта</span></li>
+                        <li><i class="fa-solid fa-box text-success"></i> <span>від 60 грн. - Нова Пошта</span></li>
+                        <li><i class="fa-solid fa-handshake text-primary"></i> <span>Самовивіз</span></li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="card shadow-sm mb-3 seller-card">
+                <div class="card-body">
+                    <h5 class="card-title h6 mb-3">Користувач</h5>
+                    <div class="d-flex align-items-center">
+                        <div class="seller-avatar">
+                            <i class="fa-solid fa-user fa-2x"></i>
+                        </div>
+                        {% if user.is_authenticated and ad.user == user %}
+                            <a href="{% url 'ad_edit' slug=ad.slug %}" class="btn btn-outline-primary btn-sm"><i class="fa-solid fa-pen"></i> Редагувати</a>
+                        {% endif %}
+                        <div class="ms-3">
+                            {# ВИПРАВЛЕНО: ad.user.username #}
+                            <strong class="d-block">{{ ad.user.username }}</strong>
+                            {# ВИПРАВЛЕНО: ad.user.date_joined #}
+                            <span class="text-muted small">на OLX з {{ ad.user.date_joined|date:"M Y" }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card shadow-sm mb-3">
+                <div class="card-body">
+                    <h5 class="card-title h6 mb-3">Місцезнаходження</h5>
+                    <p class="card-text">
+                        <i class="fa-solid fa-location-dot me-1"></i>
+                        {# ВИПРАВЛЕНО: ad.place #}
+                        {{ ad.place|default:"Місце не вказано" }}
+                    </p>
+                    {# ВИПРАВЛЕНО ШЛЯХ: static 'images/map_placeholder.png' #}
+                    <img src="{% static 'images/map_placeholder.png' %}" class="img-fluid rounded" alt="Мапа">
+                </div>
+            </div>
+
+        </div> {# ЗАКРИТИЙ ТЕГ: <div class="col-lg-4"> #}
+    </div> {# ЗАКРИТИЙ ТЕГ: <div class="row"> #}
+</div> {# ЗАКРИТИЙ ТЕГ: <div class="container-fluid"> #}
 {% endblock %}

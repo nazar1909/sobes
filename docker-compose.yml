@@ -32,10 +32,9 @@ services:
       RABBITMQ_DEFAULT_PASS: password
 
   # 4. Основний Додаток Django (Web Server)
+# 4. Основний Додаток Django (Web Server)
   web:
-    build: .
-    # ВИПРАВЛЕННЯ: Використовуємо wait-for-it для очікування бази даних
-    # Прибрано 'makemigrations'
+    build: .  # <-- ОСЬ ЦЕЙ РЯДОК БУВ ПОТРІБЕН
     command: >
       sh -c "python manage.py wait_for_db 
       && python manage.py migrate 
@@ -45,33 +44,34 @@ services:
     ports:
       - "8000:8000"
     environment:
-      # ЯВНО ВСТАНОВЛЮЄМО ШЛЯХ ДО НАЛАШТУВАНЬ, щоб уникнути помилок
+      # --- А ЦЕ РЯДКИ, ЯКІ Я ВАМ ДАВ ---
       - DJANGO_SETTINGS_MODULE=sobes.settings
-
-      # Змінні для підключення до БД (використовуйте ім'я сервісу як хост)
       - POSTGRES_DB=hello_django_dev
       - POSTGRES_USER=hello_django
       - POSTGRES_PASSWORD=hello_django
       - POSTGRES_HOST=db
-      - POSTGRES_PORT=5432 # Додаємо порт
-
-      # Змінні для Celery/Redis/RabbitMQ
+      - POSTGRES_PORT=5432
       - REDIS_HOST=redis
       - RABBITMQ_HOST=rabbitmq
+      - RABBITMQ_DEFAULT_USER=user
+      - RABBITMQ_DEFAULT_PASS=password
+      - RABBITMQ_PORT=5672 # <-- Включно з цим
+      # --------------------------------
+
     depends_on:
       - db
       - redis
       - rabbitmq
 
   # 5. Celery Worker (для виконання фонових завдань)
+# 5. Celery Worker (для виконання фонових завдань)
   celery:
-    build: .
-    # ВИПРАВЛЕННЯ: Додаємо логіку очікування DB, щоб Celery не запускався раніше міграцій
+    build: .  # <-- ДОДАЙТЕ ЦЕЙ РЯДОК
     command: >
       sh -c "python manage.py wait_for_db 
       && celery -A sobes worker -l info"
     volumes:
-      - .:/app
+      - .:/app  # <-- І ЦЕЙ
     environment:
       - DJANGO_SETTINGS_MODULE=sobes.settings
       - REDIS_HOST=redis
@@ -81,8 +81,12 @@ services:
       - POSTGRES_DB=hello_django_dev
       - POSTGRES_USER=hello_django
       - POSTGRES_PASSWORD=hello_django
+      - RABBITMQ_DEFAULT_USER=user
+      - RABBITMQ_DEFAULT_PASS=password
+      - RABBITMQ_PORT=5672
+
     depends_on:
-      - web # Celery залежить від web, щоб переконатися, що міграції виконані
+      - web
       - redis
       - rabbitmq
 

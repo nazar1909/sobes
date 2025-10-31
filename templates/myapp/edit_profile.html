@@ -1,0 +1,121 @@
+{% extends 'main/layout.html' %}
+{% load static %}
+{% block content %}
+
+<link href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css" rel="stylesheet" />
+
+<div class="edit-profile-card">
+    <h2><i class="fa-solid fa-gear"></i> Редагування профілю</h2>
+
+    <form method="POST" enctype="multipart/form-data" class="profile-form">
+        {% csrf_token %}
+
+        <!-- Аватар -->
+        <div class="avatar-section">
+            <img id="avatarPreview" src="{% if form.instance.image %}{{ form.instance.image.url }}{% else %}https://cdn-icons-png.flaticon.com/512/149/149071.png{% endif %}" class="profile-avatar-preview" alt="Avatar">
+
+            <label class="btn btn-pink mt-2">
+                <i class="fa-solid fa-upload me-2"></i> Змінити фото
+                <input type="file" id="avatarInput" name="image" accept="image/*" hidden>
+            </label>
+        </div>
+
+        <!-- Поля -->
+        <div class="form-group">
+            <label>Ім’я користувача</label>
+            {{ form.full_name }}
+        </div>
+        <div class="form-group">
+            <label>Опис</label>
+            {{ form.bio }}
+        </div>
+        <div class="form-group">
+            <label>Телефон</label>
+            {{ form.phone }}
+        </div>
+        <div class="form-group">
+            <label>Місцезнаходження</label>
+            {{ form.location }}
+        </div>
+
+        <button type="submit" class="btn btn-gradient mt-3">
+            <i class="fa-solid fa-floppy-disk me-2"></i> Зберегти зміни
+        </button>
+    </form>
+</div>
+
+<!-- Модальне вікно для cropper -->
+<div id="cropperModal" class="cropper-modal">
+    <div class="cropper-content">
+        <h4>Обрізати фото</h4>
+        <img id="cropperImage" style="max-width:100%;" />
+        <div class="cropper-buttons">
+            <button id="cropSave" class="btn btn-pink">Обрізати</button>
+            <button id="cropCancel" class="btn btn-secondary">Скасувати</button>
+        </div>
+    </div>
+</div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
+
+<script>
+
+    let cropper;
+const input = document.getElementById('avatarInput');
+const modal = document.getElementById('cropperModal');
+const cropperImage = document.getElementById('cropperImage');
+const avatarPreview = document.getElementById('avatarPreview');
+
+input.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = () => {
+        cropperImage.src = reader.result;
+        modal.style.display = 'flex';
+
+        setTimeout(() => {
+            cropper = new Cropper(cropperImage, {
+                aspectRatio: 1,
+                viewMode: 1,
+                dragMode: 'move',
+                background: false,
+                responsive: true,
+                autoCropArea: 1,
+                minContainerWidth: 400,
+                minContainerHeight: 400,
+                checkOrientation: false,
+            });
+        }, 100);
+    };
+    reader.readAsDataURL(file);
+});
+
+document.getElementById('cropCancel').onclick = () => {
+    modal.style.display = 'none';
+    cropper?.destroy();
+};
+
+document.getElementById('cropSave').onclick = () => {
+    // 2x масштаб для чіткості
+    const canvas = cropper.getCroppedCanvas({
+        width: 400,
+        height: 400,
+        imageSmoothingEnabled: true,
+        imageSmoothingQuality: 'high'
+    });
+
+    canvas.toBlob((blob) => {
+        const file = new File([blob], "avatar.jpg", { type: "image/jpeg" });
+        const dataTransfer = new DataTransfer();
+        dataTransfer.items.add(file);
+        input.files = dataTransfer.files;
+
+        avatarPreview.src = URL.createObjectURL(blob);
+        modal.style.display = 'none';
+        cropper.destroy();
+    }, 'image/jpeg', 0.95); // якість 95%
+};
+</script>
+{% endblock %}

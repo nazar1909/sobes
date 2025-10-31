@@ -1,0 +1,93 @@
+{% extends 'main/layout.html' %}
+{% load static %}
+
+{% block title %}Мій профіль{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h2">Мої оголошення</h1>
+        <a href="{% url 'ad_create' %}" class="btn btn-primary-dark">
+            + Додати нове оголошення
+        </a>
+    </div>
+<div class="profile-ads-container">
+    {% if user_ads %}
+        
+        {% for ad in user_ads %}
+        <div class="card shadow-sm mb-4 ad-management-card position-relative">
+            <div class="row g-0"> {# ПОЧАТОК ROW #}
+
+                <div class="col-md-3">
+                    {% if ad.images.all %} {# Перевіряємо images #}
+                        <img src="{{ ad.images.first.image.url }}" class="ad-management-img" alt="{{ ad.title }}"> {# Перше фото #}
+                    {% else %}
+                        {# ВИПРАВЛЕНО: Шлях до placeholder.png, припускаючи, що він у static/images/ #}
+                        <img src="{% static 'media/images/placeholder.png' %}" class="ad-management-img" alt="Немає фото">
+                    {% endif %}
+                </div>
+
+                <div class="col-md-9">
+                    <div class="card-body">
+
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <h5 class="card-title mb-0">
+                                <a href="{% url 'ad_detail' slug=ad.slug %}" class="stretched-link text-decoration-none text-dark">
+                                    {{ ad.title }}
+                                </a>
+                            </h5>
+                            <h4 class="text-dark fw-bold mb-0 ms-3">{{ ad.price|floatformat:0 }} грн</h4>
+                        </div>
+
+                        <p class="card-text text-muted small mb-3">
+                            <i class="fa-solid fa-location-dot me-1"></i>
+                            {# ВИПРАВЛЕНО: Використовуємо ad.place та ad.date, як у моделі #}
+                            {{ ad.place|default:"Місце не вказано" }} <i class="fa-solid fa-calendar-day ms-3 me-1"></i>
+                            Опубліковано: {{ ad.date|date:"d M Y" }}
+                        </p>
+
+                       <div class="d-flex flex-wrap align-items-center text-muted small mb-3 ad-stats">
+                            {# Реальні перегляди (потрібно додати поле 'views' у модель AD) #}
+                            <span class="me-3"><i class="fa-solid fa-eye me-1"></i> {{ ad.views|default:"0" }}</span>
+                            {# Серця (якщо потрібно) #}
+                            <span class="me-3"><i class="fa-solid fa-heart me-1"></i> {{ ad.favorites_count|default:"0" }}</span>
+                            {# Посилання на статистику видалено #}
+                            {# Реальні повідомлення (потрібно додати логіку підрахунку) #}
+                            <a href="#" class="btn btn-link btn-sm p-0 fw-bold position-relative"><i class="fa-solid fa-message me-1"></i> {{ ad.message_count|default:"0" }}</a>
+                        </div>
+
+                        <div class="d-flex flex-wrap gap-2">
+                            <a href="{% url 'ad_edit' slug=ad.slug %}" class="btn btn-outline-primary btn-sm position-relative"><i class="fa-solid fa-pen"></i> Редагувати</a>
+                            <form action="{% url 'ad_deactivate' slug=ad.slug %}" method="POST"
+                                onsubmit="return confirm('Ви впевнені, що хочете деактивувати це оголошення?');"
+                                class="d-inline">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-outline-danger btn-sm">
+                                <i class="fa-solid fa-ban"></i> Деактивувати
+                            </button>
+                        </form>
+                        </div>
+
+                    </div>
+                </div>
+
+            </div> {# ЗАКРИТИЙ ТЕГ: <div class="row g-0"> #}
+
+
+
+        </div> {# ЗАКРИТИЙ ТЕГ: <div class="card shadow-sm ..."> #}
+        {% endfor %}
+        {% else %}
+        <div class="text-center p-5 bg-light rounded">
+            <h3>У вас ще немає оголошень</h3>
+            <p class="lead text-muted">Час це виправити!</p>
+            <a href="{% url 'ad_create' %}" class="btn btn-primary-dark btn-lg mt-3">
+                Створити перше оголошення
+            </a>
+        </div>
+    {% endif %}
+
+</div>
+</div>
+{% endblock %}

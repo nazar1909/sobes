@@ -1,0 +1,106 @@
+{% extends 'main/layout.html' %}
+{% load static %}
+{% block content %}
+
+<div class="edit-profile-card">
+    <h2><i class="fa-solid fa-user" style="color: #3a1a30"></i> Профіль користувача</h2>
+
+    <div class="profile-view">
+        <!-- Фото профілю -->
+        <div class="avatar-section">
+            <img src="{% if user.profile.image %}{{ user.profile.image.url }}{% else %}https://cdn-icons-png.flaticon.com/512/149/149071.png{% endif %}"
+                 class="profile-avatar-preview"
+                 alt="Avatar"
+                 onclick="openImageModal(this.src)">
+        </div>
+
+        <!-- Інформація -->
+        <div class="form-group">
+            <label>Ім’я користувача</label>
+            <p>{{ profile_data.full_name|default:user.username }}</p>
+        </div>
+
+        <div class="form-group">
+            <label>Опис</label>
+            <p>{{ user.profile.bio|default:'Не вказано' }}</p>
+        </div>
+
+        <div class="form-group">
+            <label>Телефон</label>
+            <p>{{ user.profile.phone|default:'Не вказано' }}</p>
+        </div>
+
+        <div class="form-group">
+            <label>Місцезнаходження</label>
+            <p>{{ user.profile.location|default:'Не вказано' }}</p>
+        </div>
+
+        <!-- Кнопки -->
+        <div class="profile-buttons">
+            <a href="{% url 'edit_profile' %}" class="btn btn-pink me-2">
+                <i class="fa-solid fa-pen-to-square"></i> Редагувати
+            </a>
+            <a href="javascript:history.back()" class="btn btn-gradient">
+                <i class="fa-solid fa-arrow-left"></i> Назад
+            </a>
+        </div>
+    </div>
+</div>
+<script>
+let cropper;
+let croppedBlob = null;
+const avatarInput = document.getElementById('avatarInput');
+const profileForm = document.getElementById('profileForm');
+const cropperModal = document.getElementById('cropperModal'); // твоя модалка
+const croppedImage = document.getElementById('croppedImage'); // <img> у cropper
+
+// === 1. Відкрити Cropper ТІЛЬКИ при виборі нового фото ===
+avatarInput.addEventListener('change', function (e) {
+    const file = e.target.files[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = function (event) {
+            croppedImage.src = event.target.result;
+            cropperModal.style.display = 'flex'; // показує модалку
+            if (cropper) cropper.destroy();
+            cropper = new Cropper(croppedImage, {
+                aspectRatio: 1,
+                viewMode: 1,
+                responsive: true,
+            });
+        };
+        reader.readAsDataURL(file);
+    }
+});
+
+// === 2. Обрізати і зберегти зображення ===
+document.getElementById('cropButton').addEventListener('click', function () {
+    cropper.getCroppedCanvas().toBlob(function (blob) {
+        croppedBlob = blob;
+        cropperModal.style.display = 'none';
+    });
+});
+
+// === 3. При натисканні "Зберегти зміни" ===
+profileForm.addEventListener('submit', function (e) {
+    // Якщо фото обрізане — додаємо його у форму
+    if (croppedBlob) {
+        e.preventDefault();
+        const formData = new FormData(profileForm);
+        formData.append('avatar', croppedBlob, 'avatar.png');
+
+        fetch(profileForm.action, {
+            method: 'POST',
+            body: formData,
+        }).then(response => {
+            if (response.ok) {
+                location.reload();
+            } else {
+                alert('Помилка при збереженні');
+            }
+        });
+    }
+    // Якщо не міняли фото — просто дати формі сабмітитись як звичайно
+});
+</script>
+{% endblock %}

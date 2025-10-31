@@ -1,16 +1,152 @@
-{% extends 'main/layout.html' %}
+{% extends "main/layout.html" %}
 {% load static %}
 
-{% block title %}Увійти{% endblock %}
-
 {% block content %}
-<h1 style="text-align: center">Увійти</h1>
-<form method="post" style="margin-left: 200px">
-    {% csrf_token %}
-    {{ form.as_p }}
-    <button type="submit" class="btn btn-primary" style="margin-left: 200px">Увійти</button>
-    <a href="{% url 'register' %}" class="btn btn-link" style="margin-left: 200px">Зареєструватись</a>
-    <a href="{% url 'password_reset' %}" class="btn btn-link" style="margin-left: 200px">Забули пароль?</a>
+<div class="container mt-5">
+  <div class="d-flex justify-content-center">
+    <div class="form-card p-4 shadow-sm rounded-3 bg-white form-wrapper" style="width: 400px;">
 
-</form>
+      <div class="form-header text-center">
+        <img src="{% static 'media/images/olx.svg' %}" alt="OLX" class="form-logo">
+        <h2>Увійти</h2>
+      </div>
+
+      <form id="login-form" method="post" novalidate>
+        {% csrf_token %}
+
+        <!-- Username -->
+        <div class="mb-3 position-relative">
+          <label for="{{ form.username.id_for_label }}" class="form-label">Ім’я користувача</label>
+          <div class="input-group">
+            {{ form.username }}
+          </div>
+          <div class="invalid-feedback d-block">
+            {% for error in form.username.errors %}{{ error }}{% endfor %}
+          </div>
+        </div>
+
+        <!-- Password -->
+        <div class="mb-3 position-relative">
+          <label for="{{ form.password.id_for_label }}" class="form-label">Пароль</label>
+          <div class="input-group">
+            {{ form.password }}
+            <button type="button" class="btn btn-outline-secondary toggle-password-btn"
+              data-target="#{{ form.password.id_for_label }}" tabindex="-1">
+              <i class="bi bi-eye"></i>
+            </button>
+          </div>
+          <div class="invalid-feedback d-block">
+            {% for error in form.password.errors %}{{ error }}{% endfor %}
+            {% for error in form.non_field_errors %}{{ error }}{% endfor %}
+          </div>
+        </div>
+
+        <button type="submit" class="btn btn-primary w-100">Увійти</button>
+
+        <div class="text-center mt-3">
+          Немає акаунта? <a href="{% url 'register' %}" class="fw-semibold">Зареєструватись</a>
+        </div>
+
+        <div class="text-center mt-2">
+          <a href="{% url 'password_reset' %}" class="small text-muted">Забули пароль?</a>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<link rel="stylesheet"
+  href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  const form = document.querySelector('#login-form');
+
+  // === Миттєва валідація ===
+  form.querySelectorAll('input').forEach(input => {
+    input.addEventListener('input', () => validateField(input));
+  });
+
+  // === Основна функція валідації ===
+  function validateField(input) {
+    const name = input.name;
+    const value = input.value.trim();
+    const feedback = input.closest('.mb-3').querySelector('.invalid-feedback');
+    const icon = input.nextElementSibling?.classList.contains('input-icon')
+      ? input.nextElementSibling
+      : null;
+
+    if (!feedback) return;
+
+    // ---- USERNAME ----
+    if (name === 'username') {
+      const onlyDigits = /^[0-9]+$/;
+      const forbiddenChars = /[!@_]/;
+
+      if (!value) return clearField(input, feedback, icon);
+
+      if (forbiddenChars.test(value)) {
+        return setInvalid(input, feedback, icon, "Символи !, @, _ заборонені в імені користувача");
+      }
+
+      if (onlyDigits.test(value)) {
+        return setInvalid(input, feedback, icon, "Ім’я не може складатися лише з цифр");
+      }
+
+      if (value.length < 3) {
+        return setInvalid(input, feedback, icon, "Ім’я має містити щонайменше 3 символи");
+      }
+
+      return setValid(input, feedback, icon);
+    }
+
+    // ---- PASSWORD ----
+    if (name === 'password') {
+      if (!value) return clearField(input, feedback, icon);
+      if (value.length < 8)
+        return setInvalid(input, feedback, icon, "Пароль має містити щонайменше 8 символів");
+      return setValid(input, feedback, icon);
+    }
+  }
+
+  // === Хелпери ===
+  function setValid(input, feedback, icon) {
+    input.classList.add('is-valid');
+    input.classList.remove('is-invalid');
+    feedback.textContent = '';
+    if (icon) icon.className = 'input-icon bi bi-check-circle-fill valid-icon';
+  }
+
+  function setInvalid(input, feedback, icon, message) {
+    input.classList.add('is-invalid');
+    input.classList.remove('is-valid');
+    feedback.textContent = message;
+    if (icon) icon.className = 'input-icon bi bi-x-circle-fill invalid-icon';
+  }
+
+  function clearField(input, feedback, icon) {
+    input.classList.remove('is-invalid', 'is-valid');
+    feedback.textContent = '';
+    if (icon) icon.className = 'input-icon bi';
+  }
+
+  // === Перемикання видимості пароля ===
+  document.querySelectorAll('.toggle-password-btn').forEach(btn => {
+    btn.addEventListener('click', function () {
+      const targetSelector = this.dataset.target;
+      const input = document.querySelector(targetSelector);
+
+      if (!input) return;
+
+      const isPassword = input.type === 'password';
+      input.type = isPassword ? 'text' : 'password';
+
+      const icon = this.querySelector('i');
+      icon.classList.toggle('bi-eye', !isPassword);
+      icon.classList.toggle('bi-eye-slash', isPassword);
+    });
+  });
+});
+</script>
+
 {% endblock %}
