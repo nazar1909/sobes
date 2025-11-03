@@ -1,10 +1,11 @@
-from django.db import models, transaction, IntegrityError
+from django.db import models,IntegrityError, transaction
 from django.contrib.auth.models import User
 from django.utils.text import slugify
 from django.urls import reverse
 from unidecode import unidecode
 from decimal import Decimal
 from django.core.validators import MinValueValidator
+import uuid
 
 
 class AD(models.Model):
@@ -25,26 +26,19 @@ class AD(models.Model):
         return self.title
 
     def save(self, *args, **kwargs):
-        """Безпечне створення slug без колізій."""
         if not self.slug:
-            base_slug = slugify(unidecode(self.title)) or "ad"
+            base_slug = slugify(self.title)
             slug_candidate = base_slug
             counter = 1
-            max_attempts = 100  # щоб не зациклитися
+            while AD.objects.filter(slug=slug_candidate).exists():
+                # Якщо є дубль — додаємо UUID, щоб уникнути нескінченного циклу
+                slug_candidate = f"{base_slug}-{uuid.uuid4().hex[:6]}"
+                counter += 1
+                if counter > 10:  # обмеження 10 спроб
+                    break
+            self.slug = slug_candidate
 
-            while counter <= max_attempts:
-                self.slug = slug_candidate
-                try:
-                    with transaction.atomic():
-                        super().save(*args, **kwargs)
-                    break  # успішне збереження
-                except IntegrityError:
-                    counter += 1
-                    slug_candidate = f"{base_slug}-{counter}"
-            else:
-                raise RuntimeError(f"Не вдалося створити унікальний slug для '{self.title}' після {max_attempts} спроб")
-        else:
-            super().save(*args, **kwargs)
+        super().save(*args, **kwargs)
 
     def get_absolute_url(self):
         return reverse('ad_detail', kwargs={'slug': self.slug})
@@ -52,12 +46,6 @@ class AD(models.Model):
     def get_edit_url(self):
         return reverse('ad_edit', kwargs={'slug': self.slug})
 
-    def get_absolute_url(self):
-        """Повертає коректний шлях до детальної сторінки оголошення."""
-        return reverse('ad_detail', kwargs={'slug': self.slug})
-
-    def get_edit_url(self):
-        return reverse('ad_edit', kwargs={'slug': self.slug})
 
 class AdImage(models.Model):
     ad = models.ForeignKey(AD, on_delete=models.CASCADE, related_name='images')
