@@ -23,7 +23,7 @@ class AD(models.Model):
     favorites = models.ManyToManyField(User, related_name='favorite_ads', blank=True)
     main_image = models.ImageField(
         upload_to='ad_images/',
-        default='media/images/placeholder.png',  # 🧠 ось це ключове
+        default='static/media/images/placeholder.png',  # 🧠 ось це ключове
         null=True,
         blank=True
     )
