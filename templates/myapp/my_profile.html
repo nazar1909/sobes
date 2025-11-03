@@ -49,58 +49,44 @@
 <script>
 let cropper;
 let croppedBlob = null;
-const avatarInput = document.getElementById('avatarInput');
-const profileForm = document.getElementById('profileForm');
-const cropperModal = document.getElementById('cropperModal'); // твоя модалка
-const croppedImage = document.getElementById('croppedImage'); // <img> у cropper
 
-// === 1. Відкрити Cropper ТІЛЬКИ при виборі нового фото ===
-avatarInput.addEventListener('change', function (e) {
-    const file = e.target.files[0];
-    if (file) {
-        const reader = new FileReader();
-        reader.onload = function (event) {
-            croppedImage.src = event.target.result;
-            cropperModal.style.display = 'flex'; // показує модалку
-            if (cropper) cropper.destroy();
-            cropper = new Cropper(croppedImage, {
-                aspectRatio: 1,
-                viewMode: 1,
-                responsive: true,
-            });
-        };
-        reader.readAsDataURL(file);
-    }
-});
+const avatarInput = document.getElementById('avatarInput');
+const cropperModal = document.getElementById('cropperModal');
+const croppedImage = document.getElementById('croppedImage');
+const cropButton = document.getElementById('cropButton');
+
+// === 1. Відкрити Cropper при виборі нового фото ===
+if (avatarInput && cropperModal && croppedImage) {
+    avatarInput.addEventListener('change', function (e) {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function (event) {
+                croppedImage.src = event.target.result;
+                cropperModal.style.display = 'flex';
+                if (cropper) cropper.destroy();
+                cropper = new Cropper(croppedImage, {
+                    aspectRatio: 1,
+                    viewMode: 1,
+                    responsive: true,
+                });
+            };
+            reader.readAsDataURL(file);
+        }
+    });
+}
 
 // === 2. Обрізати і зберегти зображення ===
-document.getElementById('cropButton').addEventListener('click', function () {
-    cropper.getCroppedCanvas().toBlob(function (blob) {
-        croppedBlob = blob;
-        cropperModal.style.display = 'none';
+if (cropButton && cropperModal) {
+    cropButton.addEventListener('click', function () {
+        if (cropper) {
+            cropper.getCroppedCanvas().toBlob(function (blob) {
+                croppedBlob = blob;
+                cropperModal.style.display = 'none';
+            });
+        }
     });
-});
+}
 
-// === 3. При натисканні "Зберегти зміни" ===
-profileForm.addEventListener('submit', function (e) {
-    // Якщо фото обрізане — додаємо його у форму
-    if (croppedBlob) {
-        e.preventDefault();
-        const formData = new FormData(profileForm);
-        formData.append('avatar', croppedBlob, 'avatar.png');
-
-        fetch(profileForm.action, {
-            method: 'POST',
-            body: formData,
-        }).then(response => {
-            if (response.ok) {
-                location.reload();
-            } else {
-                alert('Помилка при збереженні');
-            }
-        });
-    }
-    // Якщо не міняли фото — просто дати формі сабмітитись як звичайно
-});
 </script>
 {% endblock %}

@@ -8,11 +8,12 @@ services:
       - postgres_data:/var/lib/postgresql/data/
     environment:
       # Встановіть змінні для доступу (вони будуть використовуватися web/celery)
-      - POSTGRES_DB=hello_django_dev
-      - POSTGRES_USER=hello_django
-      - POSTGRES_PASSWORD=hello_django
+      - POSTGRES_DB=TEST
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=12345678
     ports:
       - "5432:5432"
+
 
   # 2. Сервіс Кешування Redis (для Celery Backend)
   redis:
@@ -45,19 +46,20 @@ services:
     ports:
       - "8000:8000"
     environment:
-      # --- А ЦЕ РЯДКИ, ЯКІ Я ВАМ ДАВ ---
       - DJANGO_SETTINGS_MODULE=sobes.settings
       - POSTGRES_DB=hello_django_dev
       - POSTGRES_USER=hello_django
       - POSTGRES_PASSWORD=hello_django
-      - POSTGRES_HOST=db
+      - POSTGRES_HOST=db     # ✅ локальний контейнер Postgres
       - POSTGRES_PORT=5432
       - REDIS_HOST=redis
       - RABBITMQ_HOST=rabbitmq
       - RABBITMQ_DEFAULT_USER=user
       - RABBITMQ_DEFAULT_PASS=password
-      - RABBITMQ_PORT=5672 # <-- Включно з цим
-      # --------------------------------
+      - RABBITMQ_PORT=5672
+      - DATABASE_URL=postgres://postgres:12345678@db:5432/TEST
+
+
 
     depends_on:
       - db
@@ -80,11 +82,13 @@ services:
       - POSTGRES_HOST=db
       - POSTGRES_PORT=5432
       - POSTGRES_DB=hello_django_dev
-      - POSTGRES_USER=hello_django
-      - POSTGRES_PASSWORD=hello_django
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=12345678
       - RABBITMQ_DEFAULT_USER=user
       - RABBITMQ_DEFAULT_PASS=password
       - RABBITMQ_PORT=5672
+      - DATABASE_URL=postgres://postgres:12345678@db:5432/TEST
+
 
     depends_on:
       - web
