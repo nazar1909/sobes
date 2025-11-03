@@ -1,8 +1,8 @@
 from django.db import models,IntegrityError, transaction
 from django.contrib.auth.models import User
+from unidecode import unidecode
 from django.utils.text import slugify
 from django.urls import reverse
-from unidecode import unidecode
 from decimal import Decimal
 from django.core.validators import MinValueValidator
 import uuid
@@ -28,11 +28,11 @@ class AD(models.Model):
 
     def save(self, *args, **kwargs):
         if not self.slug:
-            base_slug = slugify(self.title)
+            # Використовуємо unidecode щоб перетворити кирилицю в латиницю
+            base_slug = slugify(unidecode(self.title)) or "ad"
             slug_candidate = base_slug
             counter = 1
             while AD.objects.filter(slug=slug_candidate).exists():
-                # Якщо є дубль — додаємо UUID, щоб уникнути нескінченного циклу
                 slug_candidate = f"{base_slug}-{uuid.uuid4().hex[:6]}"
                 counter += 1
                 if counter > 10:  # обмеження 10 спроб
