@@ -190,28 +190,32 @@ def user_profile(request):
 
 
 # KEEP THIS FUNCTION
+from django.shortcuts import render, redirect
+from django.contrib.auth.decorators import login_required
+from .models import AD
+from .forms import AdForm, AdImageFormSet
+
 @login_required
 def ad_create(request):
     if request.method == 'POST':
-        form = AdForm(request.POST)
+        form = AdForm(request.POST, request.FILES)
         formset = AdImageFormSet(request.POST, request.FILES)
 
         if form.is_valid() and formset.is_valid():
             ad = form.save(commit=False)
             ad.user = request.user
-            ad.save()  # ⬅️ Тут автоматично створюється slug у моделі!
-            ad.refresh_from_db()
+
+            # ✅ Якщо немає головного зображення — дозволяємо залишити порожнім
+            if not ad.main_image:
+                ad.main_image = None
+
+            ad.save()  # тут створюється slug автоматично у моделі
             formset.instance = ad
             formset.save()
 
-              # 🧠 Оновлює slug після збереження
             return redirect('ad_detail', slug=ad.slug)
-
         else:
-            print("Form errors:", form.errors)
-            print("Formset errors:", formset.errors)
-            print("Non-form errors:", formset.non_form_errors())
-
+            print("❌ Errors:", form.errors, formset.errors)
     else:
         form = AdForm()
         formset = AdImageFormSet()

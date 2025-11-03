@@ -21,7 +21,12 @@ class AD(models.Model):
     place = models.CharField(max_length=50)
     slug = models.SlugField(max_length=120, unique=True, blank=True)
     favorites = models.ManyToManyField(User, related_name='favorite_ads', blank=True)
-    main_image = models.ImageField(upload_to='ad_images/', null=True, blank=True)
+    main_image = models.ImageField(
+        upload_to='ad_images/',
+        default='media/images/placeholder.png',  # 🧠 ось це ключове
+        null=True,
+        blank=True
+    )
 
     def __str__(self):
         return self.title
