@@ -1,4 +1,4 @@
-from django.db import models,IntegrityError, transaction
+from django.db import models, IntegrityError, transaction
 from django.contrib.auth.models import User
 from unidecode import unidecode
 from django.utils.text import slugify
@@ -21,9 +21,11 @@ class AD(models.Model):
     place = models.CharField(max_length=50)
     slug = models.SlugField(max_length=120, unique=True, blank=True)
     favorites = models.ManyToManyField(User, related_name='favorite_ads', blank=True)
+
+    # 🔹 Основне зображення
     main_image = models.ImageField(
         upload_to='ad_images/',
-        default='static/media/images/placeholder.png',  # 🧠 ось це ключове
+        default='static/media/images/placeholder.png',
         null=True,
         blank=True
     )
@@ -32,17 +34,21 @@ class AD(models.Model):
         return self.title
 
     def save(self, *args, **kwargs):
+        # 🔸 Генерація slug, якщо ще не створений
         if not self.slug:
-            # Використовуємо unidecode щоб перетворити кирилицю в латиницю
             base_slug = slugify(unidecode(self.title)) or "ad"
             slug_candidate = base_slug
             counter = 1
             while AD.objects.filter(slug=slug_candidate).exists():
                 slug_candidate = f"{base_slug}-{uuid.uuid4().hex[:6]}"
                 counter += 1
-                if counter > 10:  # обмеження 10 спроб
+                if counter > 10:
                     break
             self.slug = slug_candidate
+
+        # 🔸 Перевірка: хоча б одне фото (main_image або AdImage)
+        if not self.main_image and not self.pk:
+            raise IntegrityError("Оголошення повинно мати хоча б одне фото (main_image або AdImage).")
 
         super().save(*args, **kwargs)
 
@@ -55,7 +61,7 @@ class AD(models.Model):
 
 class AdImage(models.Model):
     ad = models.ForeignKey(AD, on_delete=models.CASCADE, related_name='images')
-    image = models.ImageField(upload_to='ad_images/',null=True, blank=True)
+    image = models.ImageField(upload_to='ad_images/', null=True, blank=True)
 
     def __str__(self):
         return f"Image for {self.ad.title}"
