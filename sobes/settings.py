@@ -19,6 +19,9 @@ STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media') # Папка 'media' у корені проєкту
 # -------------------------
+CSRF_TRUSTED_ORIGINS = [
+    'https://sobes-app-production-d2a1.up.railway.app',
+]
 
 # Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
