@@ -1,10 +1,11 @@
-from django.db import models
+from django.db import models, transaction, IntegrityError
 from django.contrib.auth.models import User
 from django.utils.text import slugify
 from django.urls import reverse
 from unidecode import unidecode
 from decimal import Decimal
 from django.core.validators import MinValueValidator
+
 
 class AD(models.Model):
     title = models.CharField(max_length=75)
@@ -24,19 +25,32 @@ class AD(models.Model):
         return self.title
 
     def save(self, *args, **kwargs):
-        """Автоматично створює унікальний slug на основі заголовка."""
+        """Безпечне створення slug без колізій."""
         if not self.slug:
             base_slug = slugify(unidecode(self.title)) or "ad"
-            new_slug = base_slug
+            slug_candidate = base_slug
             counter = 1
+            max_attempts = 100  # щоб не зациклитися
 
-            while AD.objects.filter(slug=new_slug).exists():
-                new_slug = f"{base_slug}-{counter}"
-                counter += 1
+            while counter <= max_attempts:
+                self.slug = slug_candidate
+                try:
+                    with transaction.atomic():
+                        super().save(*args, **kwargs)
+                    break  # успішне збереження
+                except IntegrityError:
+                    counter += 1
+                    slug_candidate = f"{base_slug}-{counter}"
+            else:
+                raise RuntimeError(f"Не вдалося створити унікальний slug для '{self.title}' після {max_attempts} спроб")
+        else:
+            super().save(*args, **kwargs)
 
-            self.slug = new_slug
+    def get_absolute_url(self):
+        return reverse('ad_detail', kwargs={'slug': self.slug})
 
-        super().save(*args, **kwargs)
+    def get_edit_url(self):
+        return reverse('ad_edit', kwargs={'slug': self.slug})
 
     def get_absolute_url(self):
         """Повертає коректний шлях до детальної сторінки оголошення."""
