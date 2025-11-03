@@ -116,26 +116,26 @@ WSGI_APPLICATION = 'sobes.wsgi.application'
 # 2. НАЛАШТУВАННЯ БАЗИ ДАНИХ (POSTGRES / SQLITE)
 # ==============================================================================
 
-# Шукаємо змінну DATABASE_URL, яку надає Railway
+# Спробуємо отримати DATABASE_URL із середовища (Railway, Render, Docker)
 db_url_from_env = os.environ.get('DATABASE_URL')
 
 if db_url_from_env:
-    # --- ЯКЩО МИ НА RAILWAY (PRODUCTION) ---
-    print("Connecting to PRODUCTION database (PostgreSQL)...")
+    # --- ПРОДАКШН / RAILWAY / DOCKER ---
+    print("✅ Connecting to PRODUCTION PostgreSQL database...")
 
-    # Перевіряємо, чи це байти, і ДЕКОДУЄМО їх
+    # Якщо DATABASE_URL передано як bytes — декодуємо
     if isinstance(db_url_from_env, bytes):
         db_url_from_env = db_url_from_env.decode('utf-8')
 
-    # Парсимо URL для Postgres
+    # Парсимо DATABASE_URL (Railway автоматично створює її)
     DATABASES = {
-        'default': dj_database_url.parse(db_url_from_env)
+        'default': dj_database_url.parse(db_url_from_env, conn_max_age=600)
     }
-else:
-    # --- ЯКЩО МИ ЛОКАЛЬНО (DEVELOPMENT) ---
-    print("Connecting to LOCAL database (sqlite3)...")
 
-    # Використовуємо локальний файл db.sqlite3
+else:
+    # --- ЛОКАЛЬНА РОЗРОБКА ---
+    print("💻 Connecting to LOCAL SQLite database...")
+
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.sqlite3',
