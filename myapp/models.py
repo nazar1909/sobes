@@ -19,6 +19,7 @@ class AD(models.Model):
         validators=[MinValueValidator(Decimal('0.00'))]
     )
     place = models.CharField(max_length=50)
+    image = models.ImageField(upload_to='ad_images/')
     slug = models.SlugField(max_length=120, unique=True, blank=True)
     favorites = models.ManyToManyField(User, related_name='favorite_ads', blank=True)
 
@@ -57,13 +58,6 @@ class AD(models.Model):
     def get_edit_url(self):
         return reverse('ad_edit', kwargs={'slug': self.slug})
 
-
-class AdImage(models.Model):
-    ad = models.ForeignKey(AD, on_delete=models.CASCADE, related_name='images')
-    image = models.ImageField(upload_to='ad_images/', )
-
-    def __str__(self):
-        return f"Image for {self.ad.title}"
 
 
 class Profile(models.Model):

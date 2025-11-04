@@ -8,7 +8,7 @@ from django.contrib.auth.decorators import login_required
 from .models import AD,Profile
 from django.core.mail import send_mail
 from django.conf import settings
-from .forms import OrderForm,PasswordResetForm,AdImageFormSet
+from .forms import OrderForm,PasswordResetForm
 from django.utils.http import urlsafe_base64_encode
 from django.contrib.auth.tokens import default_token_generator
 from django.utils.encoding import force_bytes
@@ -194,46 +194,37 @@ def user_profile(request):
 
 
 
+
 @login_required
-
-
+@login_required
 def ad_create(request):
     if request.method == 'POST':
         form = AdForm(request.POST, request.FILES)
-        formset = AdImageFormSet(request.POST, request.FILES,
-                                 prefix='ad_images')  # Додайте префікс для уникнення конфліктів
 
-        if form.is_valid() and formset.is_valid():
+        if form.is_valid():
+            ad_instance = form.save(commit=False)
 
-            # Перевірка: Чи є хоча б одне зображення?
-            has_main_image = form.cleaned_data.get('main_image')
-            has_formset_images = any(not f.cleaned_data.get('DELETE') and f.cleaned_data.get('image') for f in formset)
+            # 🛑 ЦЕЙ БЛОК ТЕПЕР ВИДАЛЯЄТЬСЯ, тому що Django Forms сам виявить відсутність файлу.
+            # if not ad_instance.image:
+            #     messages.error(request, 'Оголошення повинно містити принаймні одне основне фото.')
+            #     return render(request, 'myapp/ad_form.html', {'form': form})
 
-            if not has_main_image and not has_formset_images:
-                # 🛑 Якщо немає ні основного, ні додаткових фото
-                messages.error(request, 'Оголошення повинно містити хоча б одне фото (основне або додаткове).')
-                # Форми вже мають дані, просто рендеримо їх з помилкою
-                return render(request, 'myapp/ad_form.html', {'form': form, 'formset': formset})
-
-            # Якщо фото є, зберігаємо атомарно
+            # 3. Збереження оголошення
             with transaction.atomic():
-                ad = form.save(commit=False)
-                ad.user = request.user
-                ad.save()
+                ad_instance.user = request.user
+                ad_instance.save()
 
-                formset.instance = ad
-                formset.save()
-
-            return redirect('ad_detail', slug=ad.slug)
+            return redirect('ad_detail', slug=ad_instance.slug)
         else:
-            # Обробка помилок форми/формсета (наприклад, недійсна ціна)
-            # print("❌ Errors:", form.errors, formset.errors)
+            # Обробка помилок форми
             pass
     else:
         form = AdForm()
-        formset = AdImageFormSet(prefix='ad_images')
+        # formset БІЛЬШЕ НЕ ПОТРІБНО
 
-    return render(request, 'myapp/ad_form.html', {'form': form, 'formset': formset})
+    # 4. Рендеринг
+    # У шаблон більше не передається 'formset'
+    return render(request, 'myapp/ad_form.html', {'form': form})
 
 
 @login_required
@@ -251,29 +242,32 @@ def ad_deactivate(request, slug):
     # Якщо хтось зайшов GET-запитом, нічого не робимо
     return redirect('ad_detail', slug=ad.slug)
 
+
 @login_required
 def ad_edit(request, slug):
     ad = get_object_or_404(AD, slug=slug)
 
     # ❗ Захист — тільки власник може редагувати
     if ad.user != request.user:
-        return redirect('ad_detail', slug=slug)  # ← без 'myapp/' !!!
+        return redirect('ad_detail', slug=slug)
 
     if request.method == 'POST':
+        # form тепер обробляє AD.image
         form = AdForm(request.POST, request.FILES, instance=ad)
-        formset = AdImageFormSet(request.POST, request.FILES, instance=ad)
+
+        # formset ВИДАЛЕНО
         if form.is_valid():
             form.save()
-            formset.save()
-            return redirect('ad_detail', slug=ad.slug)  # ← без 'myapp/' !!!
+            # formset.save() БІЛЬШЕ НЕ ПОТРІБНО
+            return redirect('ad_detail', slug=ad.slug)
     else:
         form = AdForm(instance=ad)
-        formset = AdImageFormSet(instance=ad)
+        # formset ВИДАЛЕНО
 
     return render(request, 'myapp/ad_form.html', {
         'form': form,
-        'formset': formset,
-        'is_edit': True,  # 🧩 додатковий прапорець, щоб шаблон знав, що це редагування
+        # 'formset': formset, БІЛЬШЕ НЕ ПОТРІБНО
+        'is_edit': True,
         'ad': ad
     })
 class CustomUserCreationForm(UserCreationForm):

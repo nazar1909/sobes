@@ -4,7 +4,7 @@ from django.core.exceptions import ValidationError
 import re
 from django import forms
 from django.db.models.query import ValuesIterable
-from .models import AD,AdImage,Profile
+from .models import AD,Profile
 from . import models
 from django.forms import inlineformset_factory
 
@@ -27,58 +27,26 @@ class RegistrationForm(UserCreationForm):
         }
 
 # Основна форма для оголошення (БЕЗ поля image)
+# Основна форма для оголошення (Тепер з полем image)
 class AdForm(forms.ModelForm):
     class Meta:
+        # Додаємо 'image' до списку полів моделі AD
         model = AD
-        fields = ['title', 'price', 'body', 'place']  # Тільки поля моделі AD
+        fields = ['title', 'price', 'body', 'place', 'image']
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # Додаємо класи та плейсхолдери Bootstrap
-        self.fields['title'].widget.attrs.update(
-            {'class': 'form-control', 'placeholder': 'Наприклад, iPhone 11 з гарантією'})
-        self.fields['price'].widget.attrs.update(
-            {'class': 'form-control', 'placeholder': '0'})  # Додав плейсхолдер 0 для ціни
-        self.fields['body'].widget.attrs.update(
-            {'class': 'form-control', 'rows': 5, 'placeholder': 'Подумайте, що хотів би дізнатися покупець...'})
-        self.fields['place'].widget.attrs.update(
-            {'class': 'form-control', 'placeholder': 'Наприклад, Львів'})  # Додав плейсхолдер для місця
 
-        # Додаємо клас is-invalid при помилках
-        for field_name, field in self.fields.items():
-            if self.errors.get(field_name):
-                current_classes = field.widget.attrs.get('class', '')
-                field.widget.attrs['class'] = f'{current_classes} is-invalid'.strip()
+        # Налаштування для всіх полів
+        field_attrs = {
+            'title': {'placeholder': 'Наприклад, iPhone 11 з гарантією'},
+            'price': {'placeholder': '0'},
+            'body': {'placeholder': 'Подумайте, що хотів би дізнатися покупець...', 'rows': 5},
+            'place': {'placeholder': 'Наприклад, Львів'},
+            'image': {'accept': 'image/*'} # Для поля зображення
+        }
 
 
-# Форма для ОДНОГО зображення
-class AdImageForm(forms.ModelForm):
-    class Meta:
-        model = AdImage
-        fields = ['image']  # Тільки поле image з моделі AdImage
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        # Додаємо атрибути до поля image
-        self.fields['image'].widget.attrs.update({
-            'class': 'form-control',
-            'accept': 'image/*',  # Дозволяємо вибирати тільки зображення
-        })
-        # Додаємо is-invalid при помилці
-        if self.errors.get('image'):
-            current_classes = self.fields['image'].widget.attrs.get('class', '')
-            self.fields['image'].widget.attrs['class'] = f'{current_classes} is-invalid'.strip()
-
-
-# Formset для КІЛЬКОХ форм зображень (ВАЖЛИВО: має бути ПІСЛЯ AdImageForm)
-AdImageFormSet = inlineformset_factory(
-    AD,  # Батьківська модель
-    AdImage,  # Дочірня модель
-    form=AdImageForm,  # Використовуємо форму AdImageForm
-    fields=['image'],  # Поле з AdImageForm
-    extra=7,  # Показувати 1 порожню форму спочатку
-    can_delete=True  # Дозволити видаляти фото при редагуванні
-)
 
 class OrderForm(forms.Form):
     name = forms.CharField(label="Ім’я", max_length=100)
