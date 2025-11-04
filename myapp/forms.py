@@ -4,7 +4,7 @@ from django.core.exceptions import ValidationError
 import re
 from django import forms
 from django.db.models.query import ValuesIterable
-from .models import AD,Profile
+from .models import AD,Profile,AdImage
 from . import models
 from django.forms import inlineformset_factory
 
@@ -26,12 +26,11 @@ class RegistrationForm(UserCreationForm):
             'password2': forms.PasswordInput(attrs={'autocomplete': 'new-password'}),
         }
 
-# Основна форма для оголошення (БЕЗ поля image)
 class AdForm(forms.ModelForm):
     class Meta:
         model = AD
-        # Переконайтеся, що 'image' тут!
-        fields = ['title', 'price', 'body', 'place', 'image']
+        # ❌ ВИДАЛЕНО: image (воно буде у FormSet)
+        fields = ['title', 'price', 'body', 'place']
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -40,23 +39,45 @@ class AdForm(forms.ModelForm):
         field_attrs = {
             'title': {'placeholder': 'Наприклад, iPhone 11 з гарантією'},
             'price': {'placeholder': '0'},
-            # Зверніть увагу: 'body' потребує 'rows'
             'body': {'placeholder': 'Подумайте, що хотів би дізнатися покупець...', 'rows': 5},
             'place': {'placeholder': 'Наприклад, Львів'},
-            'image': {'accept': 'image/*'}
+            # 'image' більше тут не стилізується
         }
 
+        # ... (Ваша логіка застосування класів до інших полів) ...
         for field_name, attrs in field_attrs.items():
-            if field_name in self.fields:
-                # ❗️ Забезпечуємо наявність form-control
+             if field_name in self.fields:
                 current_attrs = self.fields[field_name].widget.attrs
                 current_attrs.update({'class': 'form-control', **attrs})
+# Форма для ОДНОГО зображення
+class AdImageForm(forms.ModelForm):
+    class Meta:
+        model = AdImage
+        fields = ['image']
+    # ... (Ваша логіка __init__ для стилізації поля image) ...
 
-                # Додавання is-invalid при помилках
-                if self.errors.get(field_name):
-                    current_classes = current_attrs.get('class', '')
-                    current_attrs['class'] = f'{current_classes} is-invalid'.strip()
 
+# 🛑 ФУНКЦІЯ ВАЛІДАЦІЇ МІНІМУМУ
+def clean_ad_image_formset(formset):
+    count = 0
+    for form in formset:
+        if form.cleaned_data and not form.cleaned_data.get('DELETE'):
+            count += 1
+    if count < 1:
+        raise ValidationError("Ви повинні завантажити щонайменше одне фото (мінімум 1).", code='min_images')
+    return formset
+
+# Formset для КІЛЬКОХ форм зображень (1 до 7)
+AdImageFormSet = inlineformset_factory(
+    AD,  # Батьківська модель
+    AdImage,  # Дочірня модель
+    form=AdImageForm,
+    fields=['image'],
+    extra=7,
+    max_num=7,  # МАКСИМУМ
+    min_num=1,  # МІНІМУМ (для автоматичної валідації formset)
+    can_delete=True
+)
 
 
 class OrderForm(forms.Form):

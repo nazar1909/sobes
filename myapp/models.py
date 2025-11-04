@@ -59,6 +59,19 @@ class AD(models.Model):
         return reverse('ad_edit', kwargs={'slug': self.slug})
 
 
+class AdImage(models.Model):
+    # Посилання на оголошення (AD). related_name='images' дозволяє викликати ad.images.all()
+    ad = models.ForeignKey('AD', on_delete=models.CASCADE, related_name='images')
+
+    # Саме поле зображення
+    image = models.ImageField(upload_to='ad_images/')
+
+    class Meta:
+        verbose_name = "Додаткове зображення"
+        verbose_name_plural = "Додаткові зображення"
+
+    def __str__(self):
+        return f"Image for {self.ad.title}"
 
 class Profile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)

@@ -57,7 +57,7 @@ def listing_detail(request,):
 
 def ad_detail(request, slug):
     ad = get_object_or_404(AD, slug=slug)
-    images=ad.images.all()
+    #images=ad.image.all()
     return render(request, "myapp/ad_detail.html", {"ad": ad})
 @login_required
 def favorite_ads(request):
