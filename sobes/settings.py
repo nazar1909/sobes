@@ -6,6 +6,7 @@ from pathlib import Path
 import os
 from django.core.exceptions import ImproperlyConfigured
 import dj_database_url
+import sys
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -78,6 +79,7 @@ INSTALLED_APPS = [
     'corsheaders',
     'widget_tweaks',
     'wait_for_db_app', # ДОДАНО: Для команди "wait_for_db"
+    'django_celery_results',
 ]
 
 MIDDLEWARE = [
@@ -228,10 +230,27 @@ else:
 # 4. НАЛАШТУВАННЯ CELERY
 # ==============================================================================
 
-# Перевіряємо, чи ми на Railway (використовуємо RABBITMQ_HOST як індикатор)
-if os.environ.get('RABBITMQ_HOST'):
+# 🛑 АБСОЛЮТНА ПРИМУСОВА ПЕРЕВІРКА ДЛЯ ЛОКАЛЬНОГО SHELL/RUNSERVER
+# Визначаємо, чи ми виконуємо команду, яка вимагає синхронного режиму (shell, runserver, test)
+# Виключаємо Production, перевіряючи відсутність DATABASE_URL (найбільш надійний індикатор Railway)
+IS_LOCALLY_RUNNING = not os.environ.get('DATABASE_URL') and any(
+    arg in sys.argv for arg in ['shell', 'runserver', 'test', 'celery'])
+
+if IS_LOCALLY_RUNNING:
+    # --- ЯКЩО МИ ЛОКАЛЬНО (ПРИМУСОВИЙ EAGER РЕЖИМ) ---
+    print(">>> (FORCED LOCAL) Celery running in EAGER mode. RabbitMQ connection skipped.")
+
+    # Це примусово ігнорує будь-які RABBITMQ_HOST змінні
+    CELERY_BROKER_URL = 'memory://'
+    CELERY_TASK_ALWAYS_EAGER = True
+    CELERY_RESULT_BACKEND = 'django-db'
+
+# --- Логіка Production залишається чистою ---
+
+elif os.environ.get('RABBITMQ_HOST'):
     # --- ЯКЩО МИ НА RAILWAY (PRODUCTION) ---
     print("Connecting to PRODUCTION Celery (RabbitMQ)...")
+
     RABBITMQ_HOST = get_env_variable('RABBITMQ_HOST')
     RABBITMQ_USER = get_env_variable('RABBITMQ_DEFAULT_USER')
     RABBITMQ_PASS = get_env_variable('RABBITMQ_DEFAULT_PASS')
@@ -242,21 +261,10 @@ if os.environ.get('RABBITMQ_HOST'):
     if 'redis_url_from_env' in locals() and redis_url_from_env:
         CELERY_RESULT_BACKEND = f"{redis_url_from_env}/2"
     else:
-        CELERY_RESULT_BACKEND = None  # (Помилка, якщо Redis не підключений)
-
-else:
-    # --- ЯКЩО МИ ЛОКАЛЬНО (DEVELOPMENT) ---
-    print("Using LOCAL Celery (running tasks synchronously)...")
-
-    # Кажемо Celery виконувати всі завдання негайно,
-    # не використовуючи RabbitMQ (який локально не запущений)
-    CELERY_TASK_ALWAYS_EAGER = True
-    CELERY_BROKER_URL = 'memory://'
-    CELERY_RESULT_BACKEND = 'django-db'
+        CELERY_RESULT_BACKEND = None
 
 # --- Стандарти Celery ---
 CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = 'UTC'
-
