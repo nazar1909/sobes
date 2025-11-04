@@ -22,8 +22,6 @@ class AD(models.Model):
     slug = models.SlugField(max_length=120, unique=True, blank=True)
     favorites = models.ManyToManyField(User, related_name='favorite_ads', blank=True)
 
-    # 🔹 Основне зображення
-    main_image = models.ImageField(upload_to='ad_images/',default='images/placeholder.png')
     def __str__(self):
         return self.title
 
@@ -51,10 +49,7 @@ class AD(models.Model):
         # оскільки пов'язані AdImage ще не існують під час першого збереження AD.
 
         super().save(*args, **kwargs)
-
-    def get_main_image(self):
-        # Повертає перший об'єкт AdImage або None
-        return self.images.first()  # images - це related_name у AdImage
+# images - це related_name у AdImage
 
     def get_absolute_url(self):
         return reverse('ad_detail', kwargs={'slug': self.slug})
