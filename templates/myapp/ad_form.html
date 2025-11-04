@@ -64,7 +64,8 @@
     <div class="card-body">
         <p class="text-muted">Перше фото буде на обкладинці оголошення. Перетягніть, щоб змінити порядок фото.</p>
 
-        {{ formset.management_form }} {# Required for formset #}
+        {% load widget_tweaks %}
+    {% render_field form.image class+="form-control" %} {# Required for formset #}
 
         <div class="row g-3 ad-image-grid"> {# g-3 adds gaps between columns #}
             {% for image_form in formset %}
