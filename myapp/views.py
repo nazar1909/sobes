@@ -23,6 +23,9 @@ from django.shortcuts import render, redirect
 from django.contrib.auth.forms import SetPasswordForm
 from django.contrib import messages
 from .forms import ProfileForm
+from django.db import transaction
+
+
 # Create your views here.
 def home(request):
     ads = AD.objects.all()
@@ -189,36 +192,46 @@ def user_profile(request):
     return render(request, 'myapp/profile.html', context)
 
 
-# KEEP THIS FUNCTION
-from django.shortcuts import render, redirect
-from django.contrib.auth.decorators import login_required
-from .models import AD
-from .forms import AdForm, AdImageFormSet
+
 
 @login_required
+
+
 def ad_create(request):
     if request.method == 'POST':
         form = AdForm(request.POST, request.FILES)
-        formset = AdImageFormSet(request.POST, request.FILES)
+        formset = AdImageFormSet(request.POST, request.FILES,
+                                 prefix='ad_images')  # Додайте префікс для уникнення конфліктів
 
         if form.is_valid() and formset.is_valid():
-            ad = form.save(commit=False)
-            ad.user = request.user
 
-            # ✅ Якщо немає головного зображення — дозволяємо залишити порожнім
-            if not ad.main_image:
-                ad.main_image = None
+            # Перевірка: Чи є хоча б одне зображення?
+            has_main_image = form.cleaned_data.get('main_image')
+            has_formset_images = any(not f.cleaned_data.get('DELETE') and f.cleaned_data.get('image') for f in formset)
 
-            ad.save()  # тут створюється slug автоматично у моделі
-            formset.instance = ad
-            formset.save()
+            if not has_main_image and not has_formset_images:
+                # 🛑 Якщо немає ні основного, ні додаткових фото
+                messages.error(request, 'Оголошення повинно містити хоча б одне фото (основне або додаткове).')
+                # Форми вже мають дані, просто рендеримо їх з помилкою
+                return render(request, 'myapp/ad_form.html', {'form': form, 'formset': formset})
+
+            # Якщо фото є, зберігаємо атомарно
+            with transaction.atomic():
+                ad = form.save(commit=False)
+                ad.user = request.user
+                ad.save()
+
+                formset.instance = ad
+                formset.save()
 
             return redirect('ad_detail', slug=ad.slug)
         else:
-            print("❌ Errors:", form.errors, formset.errors)
+            # Обробка помилок форми/формсета (наприклад, недійсна ціна)
+            # print("❌ Errors:", form.errors, formset.errors)
+            pass
     else:
         form = AdForm()
-        formset = AdImageFormSet()
+        formset = AdImageFormSet(prefix='ad_images')
 
     return render(request, 'myapp/ad_form.html', {'form': form, 'formset': formset})
 

@@ -30,19 +30,25 @@ class AD(models.Model):
     def save(self, *args, **kwargs):
         # 🔸 Генерація slug, якщо ще не створений
         if not self.slug:
+            # Використовуємо unidecode для транслітерації
             base_slug = slugify(unidecode(self.title)) or "ad"
             slug_candidate = base_slug
             counter = 1
+
+            # Перевіряємо унікальність slug
             while AD.objects.filter(slug=slug_candidate).exists():
+                # Якщо slug не унікальний, додаємо короткий унікальний суфікс (UUID)
+                # для забезпечення унікальності, щоб уникнути нескінченного циклу
                 slug_candidate = f"{base_slug}-{uuid.uuid4().hex[:6]}"
                 counter += 1
+
+                # Додатковий захист від занадто довгого циклу (хоча UUID робить це малоймовірним)
                 if counter > 10:
                     break
             self.slug = slug_candidate
 
-        # 🔸 Перевірка: хоча б одне фото (main_image або AdImage)
-        if not self.main_image and not self.pk:
-            raise IntegrityError("Оголошення повинно мати хоча б одне фото (main_image або AdImage).")
+        # 🛑 ВИДАЛЕНО: Перевірка наявності зображень (вона має бути у views.py/Form/FormSet),
+        # оскільки пов'язані AdImage ще не існують під час першого збереження AD.
 
         super().save(*args, **kwargs)
 
@@ -55,7 +61,7 @@ class AD(models.Model):
 
 class AdImage(models.Model):
     ad = models.ForeignKey(AD, on_delete=models.CASCADE, related_name='images')
-    image = models.ImageField(upload_to='ad_images/', null=True, blank=True)
+    image = models.ImageField(upload_to='ad_images/', )
 
     def __str__(self):
         return f"Image for {self.ad.title}"
