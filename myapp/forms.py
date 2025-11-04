@@ -27,24 +27,35 @@ class RegistrationForm(UserCreationForm):
         }
 
 # Основна форма для оголошення (БЕЗ поля image)
-# Основна форма для оголошення (Тепер з полем image)
 class AdForm(forms.ModelForm):
     class Meta:
-        # Додаємо 'image' до списку полів моделі AD
         model = AD
+        # Переконайтеся, що 'image' тут!
         fields = ['title', 'price', 'body', 'place', 'image']
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        # Налаштування для всіх полів
+        # 🟢 ОНОВЛЕНА ЛОГІКА СТИЛІЗАЦІЇ
         field_attrs = {
             'title': {'placeholder': 'Наприклад, iPhone 11 з гарантією'},
             'price': {'placeholder': '0'},
+            # Зверніть увагу: 'body' потребує 'rows'
             'body': {'placeholder': 'Подумайте, що хотів би дізнатися покупець...', 'rows': 5},
             'place': {'placeholder': 'Наприклад, Львів'},
-            'image': {'accept': 'image/*'} # Для поля зображення
+            'image': {'accept': 'image/*'}
         }
+
+        for field_name, attrs in field_attrs.items():
+            if field_name in self.fields:
+                # ❗️ Забезпечуємо наявність form-control
+                current_attrs = self.fields[field_name].widget.attrs
+                current_attrs.update({'class': 'form-control', **attrs})
+
+                # Додавання is-invalid при помилках
+                if self.errors.get(field_name):
+                    current_classes = current_attrs.get('class', '')
+                    current_attrs['class'] = f'{current_classes} is-invalid'.strip()
 
 
 
