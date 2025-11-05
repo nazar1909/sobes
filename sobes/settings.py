@@ -79,7 +79,7 @@ if CLOUDINARY_URL:
     INSTALLED_APPS += ['cloudinary', 'cloudinary_storage']
     DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
     CLOUDINARY_CLOUD_NAME = os.environ.get('CLOUDINARY_CLOUD_NAME')  # опціонально
-    MEDIA_URL = f'https://res.cloudinary.com/{CLOUDINARY_CLOUD_NAME or CLOUDINARY_URL.split("@")[-1]}/image/upload/'
+    MEDIA_URL = f'https://res.cloudinary.com/{os.getenv("CLOUDINARY_CLOUD_NAME", "dhact88gj")}/image/upload/'
     MEDIA_ROOT = DEFAULT_MEDIA_DIR  # не використовується для зберігання, але корисний fallback
 else:
     # fallback: локальне зберігання (для DEBUG / локальної розробки)
