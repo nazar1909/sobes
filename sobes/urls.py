@@ -14,7 +14,6 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('', views.home, name='home'),
     path('register/', views.register, name='register'),
-    path('accounts/', views.register, name='accounts'),
     path('ad_create/', views.ad_create, name='ad_create'),
     path('listing/', views.listing_detail, name='listing_detail'),
     path('order/<int:ad_id>/', views.order_ad, name='order_ad'),

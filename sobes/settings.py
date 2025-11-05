@@ -86,6 +86,9 @@ else:
     MEDIA_URL = '/media/'
     MEDIA_ROOT = DEFAULT_MEDIA_DIR
 
+USE_X_FORWARDED_HOST = True
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
 # Security suggestions for production
 if not DEBUG:
     # Поради — включай у prod
