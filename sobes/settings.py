@@ -7,67 +7,43 @@ import os
 from django.core.exceptions import ImproperlyConfigured
 import dj_database_url
 import sys
+from distutils.util import strtobool
 
-# Build paths inside the project like this: BASE_DIR / 'subdir'.
+# Base dir (як ти мав)
 BASE_DIR = Path(__file__).resolve().parent.parent
-# Static files (CSS, JavaScript, Images)
+
+# Static
 STATIC_URL = '/static/'
-STATICFILES_DIRS = [
-    os.path.join(BASE_DIR, "static"),
-]
-STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")
-# --- ДОДАЙТЕ ЦІ РЯДКИ ---
-MEDIA_URL = '/media/'
-MEDIA_ROOT = os.path.join(BASE_DIR, 'media') # Папка 'media' у корені проєкту
-# -------------------------
-CSRF_TRUSTED_ORIGINS = [
-    'https://sobes-app-production-d2a1.up.railway.app',
-]
+STATICFILES_DIRS = [BASE_DIR / "static"]
+STATIC_ROOT = BASE_DIR / "staticfiles"
 
-# Default primary key field type
-DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
-# ==============================================================================
-# 1. ДОПОМІЖНА ФУНКЦІЯ ДЛЯ ЗЧИТУВАННЯ ЗМІННИХ СЕРЕДОВИЩА
-# ==============================================================================
+# Media (буде визначено далі залежно від DEBUG)
+DEFAULT_MEDIA_DIR = BASE_DIR / "media"
 
-def get_env_variable(var_name, default_value=None):
-    """
-    Отримує змінну середовища.
-    Якщо змінна не встановлена і немає значення за замовчуванням, викликає виняток.
-    """
-    value = os.environ.get(var_name)
-    if value is not None:
-        return value
-    if default_value is not None:
-        return default_value
-    # Якщо змінна обов'язкова і не встановлена
-    raise ImproperlyConfigured(f"Змінна середовища '{var_name}' не встановлена.")
+# Helper для env
+def get_env_variable(name, default=None, required=False):
+    val = os.environ.get(name, default)
+    if required and val is None:
+        raise ImproperlyConfigured(f"Environment variable '{name}' is required")
+    return val
 
+def bool_env(name, default=False):
+    val = os.environ.get(name, str(default))
+    try:
+        return bool(strtobool(val))
+    except Exception:
+        return str(val).lower() in ("1", "true", "yes", "on")
 
+# Secret & Debug
+SECRET_KEY = get_env_variable('SECRET_KEY', 'django-insecure-PLACEHOLDER')
+DEBUG = bool_env('DEBUG', default=True)
 
+# Hosts / CORS
+ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', '*').split(',') if os.environ.get('ALLOWED_HOSTS') else ['localhost']
+# Для розвитку можна залишити '*', але у production краще передати список доменів у env.
+CORS_ALLOW_ALL_ORIGINS = bool_env('CORS_ALLOW_ALL_ORIGINS', default=False)
 
-
-# Quick-start development settings - unsuitable for production
-# Зчитуємо SECRET_KEY та DEBUG із ENV, використовуючи значення за замовчуванням
-SECRET_KEY = get_env_variable('SECRET_KEY', 'django-insecure-0k=^n2z+z7vkhx!g7&)%tpux!q27y$gg%p_ha9$yfec8nh3720')
-
-# DEBUG має бути False у продакшені
-DEBUG = get_env_variable('DEBUG', 'True') == 'True'
-
-# Дозволяємо всі хости в Docker/Cloud
-ALLOWED_HOSTS = ['*']
-
-# Дозволяє підключення з будь-яких доменів
-CORS_ALLOW_ALL_ORIGINS = True
-
-# Або, для кращої безпеки, вкажи конкретні домени:
-# CORS_ALLOWED_ORIGINS = [
-#     "http://localhost:3000",
-#     "https://my-frontend.vercel.app",
-# ]
-
-# Application definition
-
+# Installed apps (твій список + cloudinary)
 INSTALLED_APPS = [
     'myapp.apps.MyappConfig',
     'django.contrib.admin',
@@ -78,9 +54,44 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'corsheaders',
     'widget_tweaks',
-    'wait_for_db_app', # ДОДАНО: Для команди "wait_for_db"
+    'wait_for_db_app',
     'django_celery_results',
+    # cloudinary додамо умовно далі лише якщо налаштовано
 ]
+
+# Cloudinary: увімкнути у production, якщо є CLOUDINARY_URL
+CLOUDINARY_URL = os.environ.get('CLOUDINARY_URL')  # може бути None
+
+if CLOUDINARY_URL:
+    # переконайтеся, що пакети встановлені: pip install cloudinary django-cloudinary-storage
+    INSTALLED_APPS += ['cloudinary', 'cloudinary_storage']
+    DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
+    CLOUDINARY_CLOUD_NAME = os.environ.get('CLOUDINARY_CLOUD_NAME')  # опціонально
+    MEDIA_URL = f'https://res.cloudinary.com/{CLOUDINARY_CLOUD_NAME or CLOUDINARY_URL.split("@")[-1]}/image/upload/'
+    MEDIA_ROOT = DEFAULT_MEDIA_DIR  # не використовується для зберігання, але корисний fallback
+else:
+    # fallback: локальне зберігання (для DEBUG / локальної розробки)
+    MEDIA_URL = '/media/'
+    MEDIA_ROOT = DEFAULT_MEDIA_DIR
+
+# Security suggestions for production
+if not DEBUG:
+    # Поради — включай у prod
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_BROWSER_XSS_FILTER = True
+    SECURE_CONTENT_TYPE_NOSNIFF = True
+    SECURE_HSTS_SECONDS = 31536000  # 1 рік; налаштуй поступово
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
+    SECURE_SSL_REDIRECT = bool_env('SECURE_SSL_REDIRECT', default=True)
+
+# Django default primary key
+DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+
+
+
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
