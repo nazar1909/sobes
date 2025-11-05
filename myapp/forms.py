@@ -8,7 +8,7 @@ from .models import AD,Profile,AdImage
 from . import models
 from django.forms import inlineformset_factory
 from PIL import Image
-
+from django.forms.models import BaseInlineFormSet
 
 class RegistrationForm(UserCreationForm):
     email = forms.EmailField(
@@ -47,12 +47,14 @@ class AdForm(forms.ModelForm):
             if field_name in self.fields:
                 self.fields[field_name].widget.attrs.update({'class': 'form-control', **attrs})
 
+
 class AdImageForm(forms.ModelForm):
     class Meta:
         model = AdImage
         fields = ['image']
         widgets = {
-            'image': forms.ClearableFileInput(attrs={'accept': 'image/*', 'class': 'd-none'})  # visually hidden; label handles click
+            # input може бути візуально прихований, але повинен існувати в DOM
+            'image': forms.ClearableFileInput(attrs={'accept': 'image/*', 'class': 'd-none'})
         }
 
     def clean_image(self):
@@ -60,16 +62,14 @@ class AdImageForm(forms.ModelForm):
         if not image:
             return image
 
-        # MIME/type check (may rely on uploaded file content_type)
         content_type = getattr(image, 'content_type', None)
         if content_type and not content_type.startswith(ALLOWED_MIME_PREFIX):
             raise ValidationError("Невірний тип файлу. Завантажте зображення.")
 
-        # Size
         if image.size > MAX_IMAGE_SIZE:
             raise ValidationError("Файл занадто великий. Макс. 5 MB.")
 
-        # Optional: try to open with PIL to check it's a valid image
+        # Перевірка через PIL
         try:
             img = Image.open(image)
             img.verify()
@@ -78,6 +78,38 @@ class AdImageForm(forms.ModelForm):
 
         return image
 
+
+# Кастомний BaseInlineFormSet для валідації мінімальної кількості фото
+class BaseAdImageInlineFormSet(BaseInlineFormSet):
+    def clean(self):
+        super().clean()
+        total = 0
+        for form in self.forms:
+            # Декілька форм можуть бути пустими; перевіряємо на наявність cleaned_data
+            if not hasattr(form, 'cleaned_data'):
+                continue
+            data = form.cleaned_data
+            if data and not data.get('DELETE', False) and data.get('image'):
+                total += 1
+
+        if total < 1:
+            raise ValidationError("Мінімум одне фото обов'язкове.")
+
+
+# --- ВАЖЛИВО: це оголошення на рівні модуля (НЕ всередині класу) ---
+AdImageFormSet = inlineformset_factory(
+    AD,
+    AdImage,
+    form=AdImageForm,
+    formset=BaseAdImageInlineFormSet,
+    fields=['image'],
+    extra=7,
+    max_num=7,
+    can_delete=True,
+    validate_max=True,
+    validate_min=True,
+    min_num=1,
+)
 class OrderForm(forms.Form):
     name = forms.CharField(label="Ім’я", max_length=100)
     email = forms.EmailField(label="Електронна пошта")

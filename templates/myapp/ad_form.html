@@ -172,52 +172,42 @@
     </form>
 </div>
 
-    <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        // Find all the file input elements within the image grid
-        const imageInputs = document.querySelectorAll('.ad-image-grid input[type="file"]');
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const imageInputs = document.querySelectorAll('.ad-image-grid input[type="file"]');
 
-        imageInputs.forEach(input => {
-            input.addEventListener('change', function(event) {
-                const file = event.target.files[0];
-                const placeholderDiv = input.closest('.ad-image-placeholder'); // Find the parent square
-                const label = placeholderDiv.querySelector('.ad-image-label'); // Find the label inside
+  imageInputs.forEach(input => {
+    input.addEventListener('change', e => {
+      const file = e.target.files[0];
+      const placeholder = input.closest('.ad-image-placeholder');
+      const label = placeholder.querySelector('.ad-image-label');
 
-                if (file && file.type.startsWith('image/')) {
-                    const reader = new FileReader();
+      // створюємо контейнер для превʼю (разово)
+      let preview = label.querySelector('.preview-container');
+      if (!preview) {
+        preview = document.createElement('div');
+        preview.classList.add('preview-container');
+        label.insertBefore(preview, input);
+      }
+      preview.innerHTML = ''; // очистити старе превʼю
 
-                    reader.onload = function(e) {
-                        // Remove existing content (icon or previous preview)
-                        label.innerHTML = '';
-
-                        // Create an img element for the preview
-                        const imgPreview = document.createElement('img');
-                        imgPreview.src = e.target.result;
-                        imgPreview.classList.add('ad-image-preview'); // Use the same class as in CSS
-                        imgPreview.alt = 'Preview';
-
-                        // Add the preview image inside the label
-                        label.appendChild(imgPreview);
-
-                        // IMPORTANT: Re-append the hidden file input so it still submits
-                        label.appendChild(input);
-                    }
-
-                    // Read the image file as a data URL
-                    reader.readAsDataURL(file);
-                } else {
-                    // Optional: Handle cases where the selected file is not an image
-                    // You could clear the preview or show an error message
-                    console.log("Selected file is not an image or no file selected.");
-                     // Clear preview if needed - find and remove existing imgPreview if any
-                     const existingPreview = label.querySelector('.ad-image-preview');
-                     if (existingPreview) {
-                         label.removeChild(existingPreview);
-                         // You might want to restore the placeholder icon here
-                     }
-                }
-            });
-        });
+      // якщо файл нормальний
+      if (file && (file.type.startsWith('image/') || /\.(jpg|jpeg|png|gif|webp)$/i.test(file.name))) {
+        const reader = new FileReader();
+        reader.onload = ev => {
+          const img = document.createElement('img');
+          img.src = ev.target.result;
+          img.classList.add('ad-image-preview');
+          img.alt = 'Preview';
+          preview.appendChild(img);
+        };
+        reader.readAsDataURL(file);
+      } else {
+        preview.innerHTML = '<div class="add-photo-text"><i class="fa-solid fa-camera fa-2x mb-2"></i><span>Додати фото</span></div>';
+      }
     });
+  });
+});
 </script>
+
 {% endblock %}
