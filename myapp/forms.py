@@ -7,7 +7,7 @@ from django.db.models.query import ValuesIterable
 from .models import AD,Profile,AdImage
 from . import models
 from django.forms import inlineformset_factory
-
+from PIL import Image
 
 
 class RegistrationForm(UserCreationForm):
@@ -26,59 +26,57 @@ class RegistrationForm(UserCreationForm):
             'password2': forms.PasswordInput(attrs={'autocomplete': 'new-password'}),
         }
 
+
+MAX_IMAGE_SIZE = 5 * 1024 * 1024  # 5 MB
+ALLOWED_MIME_PREFIX = 'image/'
+
 class AdForm(forms.ModelForm):
     class Meta:
         model = AD
-        # ❌ ВИДАЛЕНО: image (воно буде у FormSet)
         fields = ['title', 'price', 'body', 'place']
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-
-        # 🟢 ОНОВЛЕНА ЛОГІКА СТИЛІЗАЦІЇ
         field_attrs = {
             'title': {'placeholder': 'Наприклад, iPhone 11 з гарантією'},
             'price': {'placeholder': '0'},
             'body': {'placeholder': 'Подумайте, що хотів би дізнатися покупець...', 'rows': 5},
             'place': {'placeholder': 'Наприклад, Львів'},
-            # 'image' більше тут не стилізується
         }
-
-        # ... (Ваша логіка застосування класів до інших полів) ...
         for field_name, attrs in field_attrs.items():
-             if field_name in self.fields:
-                current_attrs = self.fields[field_name].widget.attrs
-                current_attrs.update({'class': 'form-control', **attrs})
-# Форма для ОДНОГО зображення
+            if field_name in self.fields:
+                self.fields[field_name].widget.attrs.update({'class': 'form-control', **attrs})
+
 class AdImageForm(forms.ModelForm):
     class Meta:
         model = AdImage
         fields = ['image']
-    # ... (Ваша логіка __init__ для стилізації поля image) ...
+        widgets = {
+            'image': forms.ClearableFileInput(attrs={'accept': 'image/*', 'class': 'd-none'})  # visually hidden; label handles click
+        }
 
+    def clean_image(self):
+        image = self.cleaned_data.get('image')
+        if not image:
+            return image
 
-# 🛑 ФУНКЦІЯ ВАЛІДАЦІЇ МІНІМУМУ
-def clean_ad_image_formset(formset):
-    count = 0
-    for form in formset:
-        if form.cleaned_data and not form.cleaned_data.get('DELETE'):
-            count += 1
-    if count < 1:
-        raise ValidationError("Ви повинні завантажити щонайменше одне фото (мінімум 1).", code='min_images')
-    return formset
+        # MIME/type check (may rely on uploaded file content_type)
+        content_type = getattr(image, 'content_type', None)
+        if content_type and not content_type.startswith(ALLOWED_MIME_PREFIX):
+            raise ValidationError("Невірний тип файлу. Завантажте зображення.")
 
-# Formset для КІЛЬКОХ форм зображень (1 до 7)
-AdImageFormSet = inlineformset_factory(
-    AD,  # Батьківська модель
-    AdImage,  # Дочірня модель
-    form=AdImageForm,
-    fields=['image'],
-    extra=7,
-    max_num=7,  # МАКСИМУМ
-    min_num=1,  # МІНІМУМ (для автоматичної валідації formset)
-    can_delete=True
-)
+        # Size
+        if image.size > MAX_IMAGE_SIZE:
+            raise ValidationError("Файл занадто великий. Макс. 5 MB.")
 
+        # Optional: try to open with PIL to check it's a valid image
+        try:
+            img = Image.open(image)
+            img.verify()
+        except Exception:
+            raise ValidationError("Пошкоджене або невідоме зображення.")
+
+        return image
 
 class OrderForm(forms.Form):
     name = forms.CharField(label="Ім’я", max_length=100)

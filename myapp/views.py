@@ -196,36 +196,32 @@ def user_profile(request):
 
 
 @login_required
-@login_required
 def ad_create(request):
     if request.method == 'POST':
-        form = AdForm(request.POST, request.FILES)
-
+        form = AdForm(request.POST)
         if form.is_valid():
-            ad_instance = form.save(commit=False)
-
-            # 🛑 ЦЕЙ БЛОК ТЕПЕР ВИДАЛЯЄТЬСЯ, тому що Django Forms сам виявить відсутність файлу.
-            # if not ad_instance.image:
-            #     messages.error(request, 'Оголошення повинно містити принаймні одне основне фото.')
-            #     return render(request, 'myapp/ad_form.html', {'form': form})
-
-            # 3. Збереження оголошення
+            # Зберігаємо батьківський об'єкт перш ніж прив'язувати formset
             with transaction.atomic():
-                ad_instance.user = request.user
-                ad_instance.save()
+                ad = form.save(commit=False)
+                ad.user = request.user
+                ad.save()
 
-            return redirect('ad_detail', slug=ad_instance.slug)
+                formset = AdImageFormSet(request.POST, request.FILES, instance=ad)
+                if formset.is_valid():
+                    formset.save()
+                    return redirect('ad_detail', slug=ad.slug)
+                else:
+                    # Якщо formset invalid — відкотиться транзакція
+                    # можна передати помилки з formset на шаблон
+                    pass
         else:
-            # Обробка помилок форми
-            pass
+            # form invalid: створюємо пустий formset, щоб показати помилки
+            formset = AdImageFormSet(request.POST, request.FILES, queryset=AdImage.objects.none())
     else:
         form = AdForm()
-        # formset БІЛЬШЕ НЕ ПОТРІБНО
+        formset = AdImageFormSet(queryset=AdImage.objects.none())
 
-    # 4. Рендеринг
-    # У шаблон більше не передається 'formset'
-    return render(request, 'myapp/ad_form.html', {'form': form})
-
+    return render(request, 'myapp/ad_form.html', {'form': form, 'formset': formset})
 
 @login_required
 def ad_deactivate(request, slug):
