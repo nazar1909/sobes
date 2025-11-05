@@ -77,7 +77,7 @@ class Profile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     full_name = models.CharField(max_length=100, blank=True)
     bio = models.TextField(blank=True)
-    image = models.ImageField(upload_to='profiles/', blank=True, null=True)
+    image = models.ImageField( blank=True, null=True)
     phone = models.CharField(max_length=20, blank=True)
     location = models.CharField(max_length=100, blank=True)
 
