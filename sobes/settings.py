@@ -39,8 +39,20 @@ SECRET_KEY = get_env_variable('SECRET_KEY', 'django-insecure-PLACEHOLDER')
 DEBUG = bool_env('DEBUG', default=True)
 
 # Hosts / CORS
-ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', '*').split(',') if os.environ.get('ALLOWED_HOSTS') else ['localhost']
-# Для розвитку можна залишити '*', але у production краще передати список доменів у env.
+ALLOWED_HOSTS = os.environ.get("ALLOWED_HOSTS")
+
+if ALLOWED_HOSTS:
+    ALLOWED_HOSTS = ALLOWED_HOSTS.split(",")
+else:
+    ALLOWED_HOSTS = [
+        "localhost",
+        "127.0.0.1",
+        "sobes-app-production-d2a1.up.railway.app",
+    ]# Для розвитку можна залишити '*', але у production краще передати список доменів у env.
+CSRF_TRUSTED_ORIGINS = [
+    "https://sobes-app-production-d2a1.up.railway.app",
+]
+
 CORS_ALLOW_ALL_ORIGINS = bool_env('CORS_ALLOW_ALL_ORIGINS', default=False)
 
 # Installed apps (твій список + cloudinary)
