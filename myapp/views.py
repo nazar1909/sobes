@@ -314,7 +314,6 @@ def edit_profile(request):
             return redirect('edit_profile')
     else:
         form = ProfileForm(instance=profile)
-
     return render(request, 'myapp/edit_profile.html', {'form': form})
 
 
