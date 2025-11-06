@@ -77,31 +77,39 @@ class AdImage(models.Model):
     def __str__(self):
         return f"Image for {self.ad.title}"
 
+DEFAULT_CLOUDINARY_IMAGE_ID = "xoe34jkbrrv8lr7mfpk8"  # твій default public_id
+
+
 class Profile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     full_name = models.CharField(max_length=100, blank=True)
     bio = models.TextField(blank=True)
-    image = CloudinaryField('image', default='xoe34jkbrrv8lr7mfpk8')
+    image = CloudinaryField('image', blank=True, null=True)
     phone = models.CharField(max_length=20, blank=True)
     location = models.CharField(max_length=100, blank=True)
 
-
-
     @property
     def image_url(self):
+        # Якщо користувач має фото — повертаємо його
         if self.image and getattr(self.image, "url", None):
             return self.image.url.replace("http://", "https://")
-        url, _ = cloudinary_url("xoe34jkbrrv8lr7mfpk8")  # твій default public_id
+        # Інакше повертаємо дефолт
+        url, _ = cloudinary_url(DEFAULT_CLOUDINARY_IMAGE_ID, secure=True)
         return url
 
     def get_full_name(self):
         return self.full_name or self.user.get_full_name() or self.user.username
 
-@receiver(post_save, sender=User)
-def create_user_profile(sender, instance, created, **kwargs):
-    if created:
-        Profile.objects.create(user=instance)
 
 @receiver(post_save, sender=User)
-def save_user_profile(sender, instance, **kwargs):
-    instance.profile.save()
+def create_or_update_user_profile(sender, instance, created, **kwargs):
+    """Автоматично створює або оновлює профіль користувача."""
+    if created:
+        # створюємо профіль із дефолтним фото
+        Profile.objects.create(
+            user=instance,
+            image=DEFAULT_CLOUDINARY_IMAGE_ID
+        )
+    else:
+        # якщо профіль існує — зберігаємо зміни
+        instance.profile.save()
