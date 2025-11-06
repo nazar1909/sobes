@@ -1,14 +1,14 @@
+version: '3.9'
+
 services:
-  # 1. Сервіс Бази Даних PostgreSQL
   db:
     image: postgres:14-alpine
     volumes:
       - postgres_data:/var/lib/postgresql/data/
     environment:
-      # Встановіть змінні для доступу (вони будуть використовуватися web/celery)
-      - POSTGRES_DB=TEST
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=12345678
+      POSTGRES_DB: ${POSTGRES_DB:-railway}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-k0NeauKStkowJkEByzZKUJzyszKnnFHE}
     ports:
       - "5432:5432"
     healthcheck:
@@ -17,51 +17,47 @@ services:
       timeout: 5s
       retries: 5
 
-  # 2. Сервіс Кешування Redis (для Celery Backend)
   redis:
     image: redis:alpine
     ports:
-      - "6381:6379" # 6379 - стандартний порт Redis
+      - "6381:6379"
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
       timeout: 5s
       retries: 5
 
-  # 3. Сервіс Брокера Повідомлень RabbitMQ (для Celery Broker)
   rabbitmq:
     image: rabbitmq:3-management-alpine
     ports:
-      - "5672:5672" # Стандартний порт для обміну повідомленнями
-      - "15672:15672" # Порт для Web UI (http://localhost:15672/)
+      - "5672:5672"
+      - "15672:15672"
     environment:
-      # Стандартні облікові дані для адмін-панелі
-      RABBITMQ_DEFAULT_USER: user
-      RABBITMQ_DEFAULT_PASS: password
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER:-guest}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS:-guest}
     healthcheck:
-      test: [ "CMD", "rabbitmq-diagnostics", "-q", "check_running" ]
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "check_running"]
       interval: 10s
       timeout: 5s
       retries: 5
 
-  # 4. Основний Додаток Django (Web Server)
   web:
-    build: .  # <-- ОСЬ ЦЕЙ РЯДОК БУВ ПОТРІБЕН
+    build: .
     command: >
-      sh -c "python manage.py wait_for_db 
-      && python manage.py migrate 
-      && python manage.py runserver 0.0.0.0:8000"
+      sh -c "python manage.py migrate &&
+             python manage.py collectstatic --noinput &&
+             gunicorn sobes.wsgi:application --bind 0.0.0.0:$PORT"
     volumes:
       - .:/app
     ports:
       - "8000:8000"
     environment:
       - DJANGO_SETTINGS_MODULE=sobes.settings
-      - DATABASE_URL=postgres://postgres:12345678@db:5432/TEST
+      - DATABASE_URL=${DATABASE_URL}
       - REDIS_HOST=redis
       - RABBITMQ_HOST=rabbitmq
-      - RABBITMQ_DEFAULT_USER=user
-      - RABBITMQ_DEFAULT_PASS=password
+      - RABBITMQ_DEFAULT_USER=${RABBITMQ_DEFAULT_USER:-guest}
+      - RABBITMQ_DEFAULT_PASS=${RABBITMQ_DEFAULT_PASS:-guest}
       - RABBITMQ_PORT=5672
     depends_on:
       db:
@@ -71,27 +67,21 @@ services:
       rabbitmq:
         condition: service_healthy
 
-  # 5. Celery Worker (для виконання фонових завдань)
   celery:
-    build: .  # <-- ДОДАЙТЕ ЦЕЙ РЯДОК
+    build: .
     command: >
-      sh -c "python manage.py wait_for_db 
-      && celery -A sobes worker -l info"
+      sh -c "python manage.py wait_for_db &&
+             celery -A sobes worker -l info"
     volumes:
-      - .:/app  # <-- І ЦЕЙ
+      - .:/app
     environment:
       - DJANGO_SETTINGS_MODULE=sobes.settings
+      - DATABASE_URL=${DATABASE_URL}
       - REDIS_HOST=redis
       - RABBITMQ_HOST=rabbitmq
-      - POSTGRES_HOST=db
-      - POSTGRES_PORT=5432
-      - POSTGRES_DB=TEST
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=12345678
-      - RABBITMQ_DEFAULT_USER=user
-      - RABBITMQ_DEFAULT_PASS=password
+      - RABBITMQ_DEFAULT_USER=${RABBITMQ_DEFAULT_USER:-guest}
+      - RABBITMQ_DEFAULT_PASS=${RABBITMQ_DEFAULT_PASS:-guest}
       - RABBITMQ_PORT=5672
-      - DATABASE_URL=postgres://postgres:12345678@db:5432/TEST
     depends_on:
       db:
         condition: service_healthy
