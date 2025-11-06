@@ -8,9 +8,12 @@ from django.core.exceptions import ImproperlyConfigured
 import dj_database_url
 import sys
 from distutils.util import strtobool
+from dotenv import load_dotenv
 
 # Base dir (як ти мав)
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+load_dotenv(BASE_DIR / '.env')
 
 # Static
 STATIC_URL = '/static/'
@@ -68,23 +71,36 @@ INSTALLED_APPS = [
     'widget_tweaks',
     'wait_for_db_app',
     'django_celery_results',
-    # cloudinary додамо умовно далі лише якщо налаштовано
+    'cloudinary',
+    'cloudinary_storage',
 ]
 
-# Cloudinary: увімкнути у production, якщо є CLOUDINARY_URL
-CLOUDINARY_URL = os.environ.get('CLOUDINARY_URL')  # може бути None
+CLOUDINARY_URL = os.environ.get('CLOUDINARY_URL')  # may be None
+CLOUDINARY_CLOUD_NAME = os.environ.get('CLOUDINARY_CLOUD_NAME')
 
+# If Cloudinary URL present, use cloudinary storage regardless of DEBUG.
 if CLOUDINARY_URL:
-    # переконайтеся, що пакети встановлені: pip install cloudinary django-cloudinary-storage
-    INSTALLED_APPS += ['cloudinary', 'cloudinary_storage']
+    # sanity: remove accidental whitespace/newlines
+    CLOUDINARY_URL = CLOUDINARY_URL.strip()
+
+    # ensure cloudinary apps are registered (you already have them in INSTALLED_APPS)
     DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
-    CLOUDINARY_CLOUD_NAME = os.environ.get('CLOUDINARY_CLOUD_NAME')  # опціонально
-    MEDIA_URL = f'https://res.cloudinary.com/{os.getenv("CLOUDINARY_CLOUD_NAME", "dhact88gj")}/image/upload/'
-    MEDIA_ROOT = DEFAULT_MEDIA_DIR  # не використовується для зберігання, але корисний fallback
+
+    # prefer provided cloud name, else parse from CLOUDINARY_URL as last part after @
+    if not CLOUDINARY_CLOUD_NAME:
+        try:
+            CLOUDINARY_CLOUD_NAME = CLOUDINARY_URL.split('@')[-1]
+        except Exception:
+            CLOUDINARY_CLOUD_NAME = 'dhact88gj'
+
+    MEDIA_URL = f'https://res.cloudinary.com/{CLOUDINARY_CLOUD_NAME}/image/upload/'
+    # MEDIA_ROOT is kept for local fallback (but not used by cloudinary)
+    MEDIA_ROOT = DEFAULT_MEDIA_DIR
 else:
-    # fallback: локальне зберігання (для DEBUG / локальної розробки)
+    # fallback to local media (for dev if cloudinary not configured)
     MEDIA_URL = '/media/'
     MEDIA_ROOT = DEFAULT_MEDIA_DIR
+
 
 USE_X_FORWARDED_HOST = True
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
@@ -103,7 +119,27 @@ if not DEBUG:
 
 # Django default primary key
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+import cloudinary
+import cloudinary.uploader
+import cloudinary.api
 
+# Якщо Cloudinary присутній у Variables
+CLOUDINARY_URL = os.getenv("CLOUDINARY_URL")
+CLOUDINARY_SECURE = True
+
+if CLOUDINARY_URL:
+    cloudinary.config(
+        cloud_name=os.getenv("CLOUDINARY_CLOUD_NAME"),
+        api_key=os.getenv("CLOUDINARY_API_KEY"),
+        api_secret=os.getenv("CLOUDINARY_API_SECRET"),
+    )
+
+    DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
+    MEDIA_URL = f'https://res.cloudinary.com/{os.getenv("CLOUDINARY_CLOUD_NAME")}/image/upload/'
+else:
+    # fallback (локально)
+    MEDIA_URL = '/media/'
+    MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 
 
