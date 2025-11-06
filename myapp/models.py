@@ -9,6 +9,7 @@ import uuid
 from cloudinary.models import CloudinaryField
 from django.db.models.signals import post_save
 from django.dispatch import receiver
+from cloudinary.utils import cloudinary_url
 
 
 class AD(models.Model):
@@ -90,7 +91,8 @@ class Profile(models.Model):
     def image_url(self):
         if self.image and getattr(self.image, "url", None):
             return self.image.url.replace("http://", "https://")
-        return "https://cdn-icons-png.flaticon.com/512/149/149071.png"
+        url, _ = cloudinary_url("xoe34jkbrrv8lr7mfpk8")  # твій default public_id
+        return url
 
     def get_full_name(self):
         return self.full_name or self.user.get_full_name() or self.user.username
