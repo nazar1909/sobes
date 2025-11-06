@@ -8,12 +8,11 @@
     <div class="profile-view">
         <!-- Фото профілю -->
         <div class="avatar-section">
-            <img src="{% if user.profile.image %}{{ user.profile.image.url }}{% else %}https://cdn-icons-png.flaticon.com/512/149/149071.png{% endif %}"
+            <img src="{{ user.profile.image_url }}"
                  class="profile-avatar-preview"
                  alt="Avatar"
                  onclick="openImageModal(this.src)">
         </div>
-
         <!-- Інформація -->
         <div class="form-group">
             <label>Ім’я користувача</label>

@@ -82,5 +82,13 @@ class Profile(models.Model):
     phone = models.CharField(max_length=20, blank=True)
     location = models.CharField(max_length=100, blank=True)
 
+
+
+    @property
+    def image_url(self):
+        if self.image and getattr(self.image, "url", None):
+            return self.image.url.replace("http://", "https://")
+        return "https://cdn-icons-png.flaticon.com/512/149/149071.png"
+
     def get_full_name(self):
         return self.full_name or self.user.get_full_name() or self.user.username
