@@ -78,7 +78,7 @@ class Profile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     full_name = models.CharField(max_length=100, blank=True)
     bio = models.TextField(blank=True)
-    image = CloudinaryField('image', blank=True, null=True)
+    image = CloudinaryField('image', default='https://res.cloudinary.com/dhact88gj/image/upload/v1762434177/xoe34jkbrrv8lr7mfpk8.png')
     phone = models.CharField(max_length=20, blank=True)
     location = models.CharField(max_length=100, blank=True)
 
