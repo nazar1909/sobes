@@ -9,6 +9,7 @@ import dj_database_url
 import sys
 from distutils.util import strtobool
 from dotenv import load_dotenv
+import re
 
 # Base dir (як ти мав)
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -54,6 +55,7 @@ else:
     ]# Для розвитку можна залишити '*', але у production краще передати список доменів у env.
 CSRF_TRUSTED_ORIGINS = [
     "https://sobes-app-production-d2a1.up.railway.app",
+    "https://*.railway.app",
 ]
 
 CORS_ALLOW_ALL_ORIGINS = bool_env('CORS_ALLOW_ALL_ORIGINS', default=False)
@@ -174,36 +176,51 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'sobes.wsgi.application'
 
-# ==============================================================================
-# 2. НАЛАШТУВАННЯ БАЗИ ДАНИХ (POSTGRES / SQLITE)
-# ==============================================================================
 
-# Спробуємо отримати DATABASE_URL із середовища (Railway, Render, Docker)
-db_url_from_env = os.environ.get('DATABASE_URL')
+# --- беремо DATABASE_URL, якщо існує ---
+db_url_from_env = os.getenv("DATABASE_URL")
 
-if db_url_from_env:
-    # --- ПРОДАКШН / RAILWAY / DOCKER ---
+# --- якщо на Railway або є DATABASE_URL ---
+if db_url_from_env and db_url_from_env.strip():
     print("✅ Connecting to PRODUCTION PostgreSQL database...")
 
-    # Якщо DATABASE_URL передано як bytes — декодуємо
     if isinstance(db_url_from_env, bytes):
-        db_url_from_env = db_url_from_env.decode('utf-8')
+        db_url_from_env = db_url_from_env.decode("utf-8")
 
-    # Парсимо DATABASE_URL (Railway автоматично створює її)
     DATABASES = {
-        'default': dj_database_url.parse(db_url_from_env, conn_max_age=600)
+        "default": dj_database_url.config(
+            default=db_url_from_env,
+            conn_max_age=600,
+            ssl_require=True
+        )
     }
 
+# --- якщо локально, є Docker ---
+elif os.getenv("POSTGRES_DB") or os.getenv("DB_HOST") == "db":
+    print("🧩 Connecting to LOCAL PostgreSQL (Docker)...")
+
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.postgresql",
+            "NAME": os.getenv("POSTGRES_DB", "sobes"),
+            "USER": os.getenv("POSTGRES_USER", "postgres"),
+            "PASSWORD": os.getenv("POSTGRES_PASSWORD", "postgres"),
+            "HOST": os.getenv("DB_HOST", "db"),
+            "PORT": os.getenv("DB_PORT", "5432"),
+        }
+    }
+
+# --- fallback: SQLite ---
 else:
-    # --- ЛОКАЛЬНА РОЗРОБКА ---
     print("💻 Connecting to LOCAL SQLite database...")
 
     DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.sqlite3',
-            'NAME': BASE_DIR / 'db.sqlite3',
+        "default": {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": BASE_DIR / "db.sqlite3",
         }
     }
+
 # Password validation
 AUTH_PASSWORD_VALIDATORS = [
     {
@@ -319,7 +336,17 @@ elif os.environ.get('RABBITMQ_HOST'):
     CELERY_BROKER_URL = f'amqp://{RABBITMQ_USER}:{RABBITMQ_PASS}@{RABBITMQ_HOST}:{RABBITMQ_PORT}//'
 
     if 'redis_url_from_env' in locals() and redis_url_from_env:
-        CELERY_RESULT_BACKEND = f"{redis_url_from_env}/2"
+        print("Connecting to Celery results backend (Redis DB 2)...")
+        # Використовуємо Redis URL для Celery Broker (DB 1), а для Results Backend використовуємо DB 2.
+        # Спочатку перевіряємо, чи є номер БД у REDIS_URL.
+
+        # Використовуємо змінну REDIS_URL для Celery.
+        # REDIS_URL має бути встановлений у .env або на Railway
+        celery_result_db_number = '2'  # Використовуйте іншу базу даних
+
+        # Це має виправити помилку '0/2'
+        CELERY_RESULT_BACKEND = re.sub(r'/[0-9]+$', f'/{celery_result_db_number}', redis_url_from_env)
+
     else:
         CELERY_RESULT_BACKEND = None
 

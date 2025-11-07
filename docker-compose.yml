@@ -6,9 +6,9 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data/
     environment:
-      POSTGRES_DB: ${POSTGRES_DB:-railway}
-      POSTGRES_USER: ${POSTGRES_USER:-postgres}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-k0NeauKStkowJkEByzZKUJzyszKnnFHE}
+      POSTGRES_DB: railway
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: k0NeauKStkowJkEByzZKUJzyszKnnFHE
     ports:
       - "5432:5432"
     healthcheck:
@@ -33,8 +33,8 @@ services:
       - "5672:5672"
       - "15672:15672"
     environment:
-      RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER:-guest}
-      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS:-guest}
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
     healthcheck:
       test: ["CMD", "rabbitmq-diagnostics", "-q", "check_running"]
       interval: 10s
@@ -46,18 +46,22 @@ services:
     command: >
       sh -c "python manage.py migrate &&
              python manage.py collectstatic --noinput &&
-             gunicorn sobes.wsgi:application --bind 0.0.0.0:$PORT"
+             gunicorn sobes.wsgi:application --bind 0.0.0.0:8000"
     volumes:
       - .:/app
     ports:
       - "8000:8000"
     environment:
+      - DB_HOST=db # Для активації Local DB блоку в settings.py
+      - POSTGRES_DB=railway
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=k0NeauKStkowJkEByzZKUJzyszKnnFHE
       - DJANGO_SETTINGS_MODULE=sobes.settings
       - DATABASE_URL=${DATABASE_URL}
       - REDIS_HOST=redis
       - RABBITMQ_HOST=rabbitmq
-      - RABBITMQ_DEFAULT_USER=${RABBITMQ_DEFAULT_USER:-guest}
-      - RABBITMQ_DEFAULT_PASS=${RABBITMQ_DEFAULT_PASS:-guest}
+      - RABBITMQ_DEFAULT_USER=guest
+      - RABBITMQ_DEFAULT_PASS=guest
       - RABBITMQ_PORT=5672
     depends_on:
       db:
@@ -75,12 +79,16 @@ services:
     volumes:
       - .:/app
     environment:
+      - DB_HOST=db # Для активації Local DB блоку в settings.py
+      - POSTGRES_DB=railway
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=k0NeauKStkowJkEByzZKUJzyszKnnFHE
       - DJANGO_SETTINGS_MODULE=sobes.settings
       - DATABASE_URL=${DATABASE_URL}
       - REDIS_HOST=redis
       - RABBITMQ_HOST=rabbitmq
-      - RABBITMQ_DEFAULT_USER=${RABBITMQ_DEFAULT_USER:-guest}
-      - RABBITMQ_DEFAULT_PASS=${RABBITMQ_DEFAULT_PASS:-guest}
+      - RABBITMQ_DEFAULT_USER=guest
+      - RABBITMQ_DEFAULT_PASS=guest
       - RABBITMQ_PORT=5672
     depends_on:
       db:
