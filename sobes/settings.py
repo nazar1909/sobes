@@ -83,24 +83,28 @@ CLOUDINARY_URL = os.environ.get('CLOUDINARY_URL')  # may be None
 CLOUDINARY_CLOUD_NAME = os.environ.get('CLOUDINARY_CLOUD_NAME')
 
 # If Cloudinary URL present, use cloudinary storage regardless of DEBUG.
+# If Cloudinary URL present, use cloudinary storage regardless of DEBUG.
 if CLOUDINARY_URL:
     # sanity: remove accidental whitespace/newlines
     CLOUDINARY_URL = CLOUDINARY_URL.strip()
 
-    # ensure cloudinary apps are registered (you already have them in INSTALLED_APPS)
+    # ensure cloudinary apps are registered (ви вже маєте їх у INSTALLED_APPS)
     DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
 
     # prefer provided cloud name, else parse from CLOUDINARY_URL as last part after @
     if not CLOUDINARY_CLOUD_NAME:
         try:
+            # ЦЕЙ БЛОК ПРАВИЛЬНО ПАРСИТЬ dhact88gj З CLOUDINARY_URL
             CLOUDINARY_CLOUD_NAME = CLOUDINARY_URL.split('@')[-1]
         except Exception:
             CLOUDINARY_CLOUD_NAME = 'dhact88gj'
 
+    # ТЕПЕР ВИКОРИСТОВУЙТЕ ЩОЙНО ВИЗНАЧЕНУ ЗМІННУ
     MEDIA_URL = f'https://res.cloudinary.com/{CLOUDINARY_CLOUD_NAME}/image/upload/'
     # MEDIA_ROOT is kept for local fallback (but not used by cloudinary)
     MEDIA_ROOT = DEFAULT_MEDIA_DIR
 else:
+
     # fallback to local media (for dev if cloudinary not configured)
     MEDIA_URL = '/media/'
     MEDIA_ROOT = DEFAULT_MEDIA_DIR
@@ -120,29 +124,6 @@ if not DEBUG:
     SECURE_HSTS_INCLUDE_SUBDOMAINS = True
     SECURE_HSTS_PRELOAD = True
     SECURE_SSL_REDIRECT = bool_env('SECURE_SSL_REDIRECT', default=True)
-
-# Django default primary key
-DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
-import cloudinary
-import cloudinary.uploader
-import cloudinary.api
-
-# Якщо Cloudinary присутній у Variables
-CLOUDINARY_URL = os.getenv("CLOUDINARY_URL")
-CLOUDINARY_SECURE = True
-
-if CLOUDINARY_URL:
-    cloudinary.config(
-        secure=True  # щоб не було http → https проблем
-    )
-
-    DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
-    MEDIA_URL = f'https://res.cloudinary.com/{os.getenv("CLOUDINARY_CLOUD_NAME")}/image/upload/'
-else:
-    # fallback (локально)
-    MEDIA_URL = '/media/'
-    MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
-
 
 
 
