@@ -167,6 +167,13 @@ db_url_from_env = os.getenv("DATABASE_URL")
 if db_url_from_env and db_url_from_env.strip():
     print("✅ Connecting to PRODUCTION PostgreSQL database...")
 
+    # Додаємо sslmode=require, якщо його немає
+    if 'sslmode' not in db_url_from_env:
+        if '?' in db_url_from_env:
+            db_url_from_env += '&sslmode=require'
+        else:
+            db_url_from_env += '?sslmode=require'
+
     if isinstance(db_url_from_env, bytes):
         db_url_from_env = db_url_from_env.decode("utf-8")
 
@@ -174,7 +181,8 @@ if db_url_from_env and db_url_from_env.strip():
         "default": dj_database_url.config(
             default=db_url_from_env,
             conn_max_age=600,
-            ssl_require=True
+            # Вимкніть ssl_require, оскільки ми додали його в URL:
+            # ssl_require=True
         )
     }
 
