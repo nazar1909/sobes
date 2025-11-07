@@ -52,6 +52,8 @@ else:
         "localhost",
         "127.0.0.1",
         "sobes-app-production-d2a1.up.railway.app",
+        ".railway.app",
+        "*.up.railway.app"
     ]# Для розвитку можна залишити '*', але у production краще передати список доменів у env.
 CSRF_TRUSTED_ORIGINS = [
     "https://sobes-app-production-d2a1.up.railway.app",
