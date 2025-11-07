@@ -6,9 +6,9 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data/
     environment:
-      POSTGRES_DB: railway
+      POSTGRES_DB: TEST
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: k0NeauKStkowJkEByzZKUJzyszKnnFHE
+      POSTGRES_PASSWORD: 12345678
     ports:
       - "5432:5432"
     healthcheck:
@@ -52,12 +52,11 @@ services:
     ports:
       - "8000:8000"
     environment:
-      - DB_HOST=db # Для активації Local DB блоку в settings.py
-      - POSTGRES_DB=railway
+      - POSTGRES_DB=TEST
       - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=k0NeauKStkowJkEByzZKUJzyszKnnFHE
+      - POSTGRES_PASSWORD=12345678
       - DJANGO_SETTINGS_MODULE=sobes.settings
-      - DATABASE_URL=${DATABASE_URL}
+      - DATABASE_URL=postgresql://postgres:12345678@host.docker.internal:5432/TEST
       - REDIS_HOST=redis
       - RABBITMQ_HOST=rabbitmq
       - RABBITMQ_DEFAULT_USER=guest
@@ -79,12 +78,11 @@ services:
     volumes:
       - .:/app
     environment:
-      - DB_HOST=db # Для активації Local DB блоку в settings.py
-      - POSTGRES_DB=railway
+      - POSTGRES_DB=TEST
       - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=k0NeauKStkowJkEByzZKUJzyszKnnFHE
+      - POSTGRES_PASSWORD=12345678
       - DJANGO_SETTINGS_MODULE=sobes.settings
-      - DATABASE_URL=${DATABASE_URL}
+      - DATABASE_URL=postgresql://postgres:12345678@host.docker.internal:5432/TEST
       - REDIS_HOST=redis
       - RABBITMQ_HOST=rabbitmq
       - RABBITMQ_DEFAULT_USER=guest
