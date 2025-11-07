@@ -179,7 +179,7 @@ if db_url_from_env and db_url_from_env.strip():
 
     DATABASES = {
         "default": dj_database_url.config(
-            default=db_url_from_env,
+            default=os.getenv("DATABASE_URL"),
             conn_max_age=600,
             # Вимкніть ssl_require, оскільки ми додали його в URL:
             # ssl_require=True
@@ -193,11 +193,11 @@ elif os.getenv("POSTGRES_DB") or os.getenv("DB_HOST") == "db":
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.postgresql",
-            "NAME": os.getenv("POSTGRES_DB", "sobes"),
+            "NAME": os.getenv("POSTGRES_DB", "TEST"),
             "USER": os.getenv("POSTGRES_USER", "postgres"),
-            "PASSWORD": os.getenv("POSTGRES_PASSWORD", "postgres"),
-            "HOST": os.getenv("DB_HOST", "db"),
-            "PORT": os.getenv("DB_PORT", "5432"),
+            "PASSWORD": os.getenv("POSTGRES_PASSWORD", "12345678"),
+            "HOST": os.getenv('POSTGRES_HOST', 'host.docker.internal'),
+            "PORT": os.getenv("POSTGRES_PORT", "5432"),
         }
     }
 
