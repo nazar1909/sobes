@@ -1,9 +1,9 @@
 from django.shortcuts import render,redirect,get_object_or_404
-from .forms import RegistrationForm
+from .forms import RegistrationForm,inlineformset_factory,BaseAdImageInlineFormSet
 from django.utils.html import escape
 from django.contrib.auth import login
 from django.urls import reverse
-from .forms import AdForm,AdImageFormSet
+from .forms import AdForm,AdImageFormSet,AdImageForm
 from django.contrib.auth.decorators import login_required
 from .models import AD,Profile,AdImage
 from django.core.mail import send_mail
@@ -61,6 +61,10 @@ def ad_detail(request, slug):
     return render(request, "myapp/ad_detail.html", {"ad": ad})
 @login_required
 def favorite_ads(request):
+    context = {
+        'ad': ad,
+        'cloudinary_url': ad.image.url if ad.image else None,
+    }
     ads = request.user.favorite_ads.all()  # через many-to-many
     return render(request, 'myapp/favorite_ads.html', {'ads': ads})
 def order_ad(request, ad_id):
@@ -192,32 +196,38 @@ def user_profile(request):
     return render(request, 'myapp/profile.html', context)
 
 
-
-
-
 @login_required
 def ad_create(request):
+    # ... (Оголошення AdImageFormSet тут або імпорт) ...
+
     if request.method == 'POST':
         form = AdForm(request.POST)
-        if form.is_valid():
-            # Зберігаємо батьківський об'єкт перш ніж прив'язувати formset
+
+        # 1. Створюємо temp_formset
+        temp_formset = AdImageFormSet(request.POST, request.FILES)
+
+        # 2. ВАЛІДУЄМО ОБИДВА ОБ'ЄКТИ
+        if form.is_valid() and temp_formset.is_valid():
+
             with transaction.atomic():
                 ad = form.save(commit=False)
                 ad.user = request.user
                 ad.save()
 
-                formset = AdImageFormSet(request.POST, request.FILES, instance=ad)
-                if formset.is_valid():
-                    formset.save()
-                    return redirect('ad_detail', slug=ad.slug)
-                else:
-                    # Якщо formset invalid — відкотиться транзакція
-                    # можна передати помилки з formset на шаблон
-                    pass
+                # 3. КРИТИЧНИЙ FIX: Встановлюємо інстанцію AD для ВЖЕ ВАЛІДОВАНОГО Formset
+                temp_formset.instance = ad
+
+                # 4. Зберігаємо ВЖЕ ВАЛІДОВАНИЙ Formset
+                temp_formset.save()  # Це працює, бо cleaned_data існує!
+
+                return redirect('ad_detail', slug=ad.slug)
+
         else:
-            # form invalid: створюємо пустий formset, щоб показати помилки
-            formset = AdImageFormSet(request.POST, request.FILES, queryset=AdImage.objects.none())
+            # Якщо валідація не пройшла, використовуємо temp_formset для відображення помилок
+            formset = temp_formset  # Він вже містить дані та помилки
+
     else:
+        # GET-запит
         form = AdForm()
         formset = AdImageFormSet(queryset=AdImage.objects.none())
 

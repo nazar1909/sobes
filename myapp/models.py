@@ -23,7 +23,7 @@ class AD(models.Model):
         validators=[MinValueValidator(Decimal('0.00'))]
     )
     place = models.CharField(max_length=50)
-    image = models.ImageField(upload_to='ad_images/')
+    image = CloudinaryField('image', blank=True, null=True)
     slug = models.SlugField(max_length=120, unique=True, blank=True)
     favorites = models.ManyToManyField(User, related_name='favorite_ads', blank=True)
 
@@ -68,7 +68,7 @@ class AdImage(models.Model):
     ad = models.ForeignKey('AD', on_delete=models.CASCADE, related_name='images')
 
     # Саме поле зображення
-    image = models.ImageField(upload_to='ad_images/')
+    image = CloudinaryField('image', blank=True, null=True)
 
     class Meta:
         verbose_name = "Додаткове зображення"

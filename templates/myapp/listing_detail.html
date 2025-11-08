@@ -1,5 +1,6 @@
 {% extends 'main/layout.html' %}
 {% load static %}
+{% load cloudinary %}
 
 {% block title %}Всі оголошення{% endblock %}
 
@@ -9,63 +10,68 @@
     <h1 class="h2 mb-4">Всі оголошення</h1>
 
     <div class="profile-ads-container">
-
         {% if ads %}
             {% for ad in ads %}
+                <div class="card shadow-sm ad-management-card mb-3 position-relative">
+                    <div class="row g-0">
+                        <div class="col-md-3 position-relative">
 
-            <div class="card shadow-sm ad-management-card mb-3 position-relative">
-                <div class="row g-0">
-
-                    <div class="col-md-3 position-relative">
-
-
-                        {% if ad.images.exists %}
-                            <img src="{{ ad.images.first.image.url }}"
-                                 alt="{{ ad.title }}"
-                                 class="ad-management-img rounded-start">
-                        {% else %}
-                            <img src="{% static 'media/images/placeholder.png' %}"
-                                 alt="Немає фото"
-                                 class="ad-management-img rounded-start">
-                        {% endif %}
-                    </div>
-
-                    <div class="col-md-9">
-                        <div class="card-body position-relative h-100 d-flex flex-column">
-
-                            <div class="d-flex justify-content-between align-items-start mb-2">
-                                <h5 class="card-title mb-0">
-                                    <a href="{% url 'ad_detail' slug=ad.slug %}" class="stretched-link text-decoration-none text-dark">
-                                        {{ ad.title }}
+                            {% if ad.images.exists %}
+                                {% with img_obj=ad.images.first %}
+                                    {% cloudinary img_obj.image width=400 height=300 crop="fill" as cloudinary_url %}
+                                    <a href="{% url 'ad_detail' slug=ad.slug %}">
+                                        <img
+                                            src="{{ cloudinary_url }}"
+                                            alt="{{ ad.title|default:'Зображення' }}"
+                                            class="ad-management-img rounded-start w-100"
+                                        >
                                     </a>
-                                </h5>
-                                <h5 class="ad-price text-dark fw-bold mb-0 ms-3">{{ ad.price|floatformat:0 }} грн</h5>
-                            </div>
-
-
-                            <div class="mt-auto">
-                                <p class="card-text small text-muted mb-0 mt-2">
-                                    <i class="fa-solid fa-location-dot me-1"></i> {{ ad.place|default:"Місце не вказано" }}
-                                    <span class="mx-2">•</span>
-                                    <i class="fa-regular fa-calendar-days me-1"></i> {{ ad.date|date:"d M Y" }}
-                                </p>
-                            </div>
-
-
-                            {% if user.is_authenticated and ad.user != user %}
-
-                            <a href="{% url 'toggle_favorite' slug=ad.slug %}"
-                               class="favorite-icon position-absolute bottom-0 end-0 m-2"
-                               onclick="event.preventDefault(); toggleFavorite('{{ ad.slug }}');">
-                                <i id="heart-{{ ad.slug }}"
-                                   class="fa{% if user in ad.favorites.all %}-solid{% else %}-regular{% endif %} fa-heart"></i>
-                            </a>
+                                {% endwith %}
+                            {% else %}
+                                <a href="{% url 'ad_detail' slug=ad.slug %}">
+                                    <img src="{% static 'media/images/placeholder.png' %}"
+                                         alt="Немає фото"
+                                         class="ad-management-img rounded-start w-100">
+                                </a>
                             {% endif %}
+                        </div>
+
+                        <div class="col-md-9">
+                            <div class="card-body position-relative h-100 d-flex flex-column">
+
+                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                    <h5 class="card-title mb-0">
+                                        <a href="{% url 'ad_detail' slug=ad.slug %}"
+                                           class="stretched-link text-decoration-none text-dark">
+                                            {{ ad.title }}
+                                        </a>
+                                    </h5>
+                                    <h5 class="ad-price text-dark fw-bold mb-0 ms-3">
+                                        {{ ad.price|floatformat:0 }} грн
+                                    </h5>
+                                </div>
+
+                                <div class="mt-auto">
+                                    <p class="card-text small text-muted mb-0 mt-2">
+                                        <i class="fa-solid fa-location-dot me-1"></i> {{ ad.place|default:"Місце не вказано" }}
+                                        <span class="mx-2">•</span>
+                                        <i class="fa-regular fa-calendar-days me-1"></i> {{ ad.date|date:"d M Y" }}
+                                    </p>
+                                </div>
+
+                                {% if user.is_authenticated and ad.user != user %}
+                                    <a href="{% url 'toggle_favorite' slug=ad.slug %}"
+                                       class="favorite-icon position-absolute bottom-0 end-0 m-2"
+                                       onclick="event.preventDefault(); toggleFavorite('{{ ad.slug }}');">
+                                        <i id="heart-{{ ad.slug }}"
+                                           class="fa{% if user in ad.favorites.all %}-solid{% else %}-regular{% endif %} fa-heart">
+                                        </i>
+                                    </a>
+                                {% endif %}
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
-
             {% endfor %}
         {% else %}
             <div class="text-center p-5 bg-light rounded">
@@ -79,155 +85,4 @@
     </div>
 
 </div>
-<script>
-function getCSRFToken() {
-    const cookie = document.cookie.split(';').find(c => c.trim().startsWith('csrftoken='));
-    return cookie ? cookie.split('=')[1] : '';
-}
-
-async function toggleFavorite(slug) {
-    try {
-        const response = await fetch(`/toggle-favorite/${slug}/`, {
-            method: 'POST',
-            headers: {
-                'X-CSRFToken': getCSRFToken(),
-                'X-Requested-With': 'XMLHttpRequest'
-            }
-        });
-
-        const data = await response.json();
-
-        if (data.success) {
-            const heartIcon = document.getElementById(`heart-${slug}`);
-            const favCountElem = document.getElementById('favorite-count');
-            const favLink = document.getElementById('favorite-link');
-
-            // ❤️ Іконка
-            if (data.is_favorite) {
-                heartIcon.classList.remove('fa-regular');
-                heartIcon.classList.add('fa-solid');
-                heartIcon.style.color = '#ff4b6e';
-            } else {
-                heartIcon.classList.add('fa-regular');
-                heartIcon.classList.remove('fa-solid');
-                heartIcon.style.color = '';
-            }
-
-            // 🔢 Лічильник
-            if (favCountElem) {
-                favCountElem.textContent = data.favorite_count;
-                favCountElem.classList.toggle('d-none', data.favorite_count === 0);
-            }
-
-            // ✨ Підсвічування (тільки якщо нове додано)
-            if (favLink) {
-                if (data.is_favorite && !window.location.pathname.includes("favorite_ads")) {
-                    // користувач додав нове — знову дозволяємо показувати
-                    localStorage.setItem('favoritesViewed', 'false');
-                    favLink.classList.add('favorite-link-active');
-                }
-
-                if (data.favorite_count === 0) {
-                    favLink.classList.remove('favorite-link-active');
-                    favCountElem.classList.add('d-none');
-                }
-            }
-
-            showToast(
-                data.is_favorite
-                    ? `💖 Додано до обраних (${data.favorite_count})`
-                    : `❌ Видалено з обраних`
-            );
-        }
-
-    } catch (error) {
-        console.error('Error:', error);
-    }
-}
-
-function showToast(message) {
-    const toast = document.createElement('div');
-    toast.textContent = message;
-    toast.className = 'favorite-toast';
-    document.body.appendChild(toast);
-    setTimeout(() => toast.classList.add('show'), 50);
-    setTimeout(() => toast.classList.remove('show'), 2500);
-    setTimeout(() => toast.remove(), 3000);
-}
-
-// 🧠 При завантаженні сторінки
-document.addEventListener("DOMContentLoaded", function () {
-    const favLink = document.getElementById("favorite-link");
-    const favCount = document.getElementById("favorite-count");
-    const currentPath = window.location.pathname;
-
-    // 1️⃣ Якщо ми на сторінці обраних
-    if (currentPath.includes("favorite-ads")) {
-        console.log("🩷 Вподобані сторінка — гасимо підсвічування через 0.5с");
-
-        setTimeout(() => {
-            if (favLink) favLink.classList.remove("favorite-link-active");
-            if (favCount) favCount.classList.add("d-none");
-
-            // Зберігаємо факт, що користувач уже бачив обрані
-            localStorage.setItem("favorites_viewed", "true");
-            console.log("💾 favorites_viewed = true");
-        }, 500);
-
-        return; // ⛔ більше нічого не виконуємо
-    }
-
-    // 2️⃣ Якщо ми НЕ на сторінці обраних
-    const hasViewedFavorites = localStorage.getItem("favorites_viewed") === "true";
-
-    if (favLink && favCount) {
-        // Якщо користувач ще не заходив у "Обране" → показуємо підсвічення
-        if (!hasViewedFavorites && parseInt(favCount.textContent) > 0) {
-            favLink.classList.add("favorite-link-active");
-            favCount.classList.remove("d-none");
-        } else {
-            // Якщо вже заходив — прибираємо
-            favLink.classList.remove("favorite-link-active");
-            favCount.classList.add("d-none");
-        }
-    }
-
-    // 3️⃣ Коли користувач додає/видаляє щось — скидаємо стан
-    document.querySelectorAll(".favorite-icon").forEach(btn => {
-        btn.addEventListener("click", () => {
-            localStorage.removeItem("favorites_viewed");
-            console.log("♻️ favorites_viewed скинуто — нова дія");
-        });
-    });
-});
-
-// 🔔 Стилі
-const style = document.createElement('style');
-style.innerHTML = `
-.favorite-toast {
-  position: fixed;
-  bottom: 20px;
-  right: 20px;
-  background: #3a1a30;
-  color: #fff;
-  padding: 10px 16px;
-  border-radius: 12px;
-  opacity: 0;
-  transition: all .3s ease-in-out;
-  z-index: 9999;
-}
-.favorite-toast.show {
-  opacity: 1;
-  transform: translateY(-10px);
-}
-`;
-document.head.appendChild(style);
-</script>
-
-
-
-
-
-
-
 {% endblock %}

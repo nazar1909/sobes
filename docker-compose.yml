@@ -52,11 +52,14 @@ services:
     ports:
       - "8000:8000"
     environment:
+      - CLOUDINARY_CLOUD_NAME=dhact88gj
+      - CLOUDINARY_API_KEY=633531725433543
+      - CLOUDINARY_API_SECRET=1U31LQvhjYxWljoN8tBIx-i36hI
       - POSTGRES_DB=TEST
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=12345678
       - DJANGO_SETTINGS_MODULE=sobes.settings
-      - DATABASE_URL=postgresql://postgres:12345678@host.docker.internal:5432/TEST
+      - DATABASE_URL=postgresql://postgres:12345678@db:5432/TEST
       - REDIS_HOST=redis
       - RABBITMQ_HOST=rabbitmq
       - RABBITMQ_DEFAULT_USER=guest
@@ -82,7 +85,7 @@ services:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=12345678
       - DJANGO_SETTINGS_MODULE=sobes.settings
-      - DATABASE_URL=postgresql://postgres:12345678@host.docker.internal:5432/TEST
+      - DATABASE_URL=postgresql://postgres:12345678@db:5432/TEST
       - REDIS_HOST=redis
       - RABBITMQ_HOST=rabbitmq
       - RABBITMQ_DEFAULT_USER=guest

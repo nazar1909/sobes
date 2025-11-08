@@ -1,12 +1,11 @@
 {% extends 'main/layout.html' %}
 {% load static %}
-
+{% load cloudinary %}
 {% block title %}{{ ad.title }}{% endblock %}
 
 {% block content %}
 <div class="container-fluid ad-detail-page">
     <div class="row">
-
         <div class="col-lg-8">
 
             <nav aria-label="breadcrumb" class="mb-2">
@@ -17,33 +16,36 @@
                 </ol>
             </nav>
 
-            {# --- БЛОК ГАЛЕРЕЇ ЗОБРАЖЕНЬ --- #}
-            <div class="card shadow-sm mb-4">
+            {# --- БЛОК ГАЛЕРЕЇ ЗОБРАЖЕНЬ (ВИПРАВЛЕНИЙ) --- #}
+            <div class="card shadow-sm mb-4 ad-gallery-block">
                 <div class="card-body p-2">
-                    {% if ad.images.all %}
-                        <div id="adCarousel" class="carousel slide" data-bs-ride="carousel">
-                            <div class="carousel-inner rounded">
-                                {% for image in ad.images.all %}
-                                    <div class="carousel-item {% if forloop.first %}active{% endif %}">
-                                        <img src="{{ image.image.url }}" class="d-block w-100 ad-detail-image" alt="{{ ad.title }}">
-                                    </div>
-                                {% endfor %}
+                    {% with images=ad.images.all %}
+                        {% if images %}
+                            <div id="adCarousel" class="carousel slide" data-bs-ride="carousel">
+                                <div class="carousel-inner rounded">
+                                    {% for img_obj in images %}
+                                        <div class="carousel-item {% if forloop.first %}active{% endif %}">
+
+                                            {# 1. ГЕНЕРАЦІЯ ЧИСТОГО URL (БЕЗ ТЕГУ <img>) #}
+                                            {% cloudinary img_obj.image width=800 height=600 crop="fill" as cloudinary_url %}
+
+                                            {# 2. ВИКОРИСТАННЯ ЗМІННОЇ URL В АТРИБУТІ src #}
+                                            <img
+                                                src="{{ cloudinary_url }}"
+                                                class="d-block w-100 ad-detail-image"
+                                                alt="{{ ad.title|default:'Зображення' }}"
+                                            >
+
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                                {# ... (Навігаційні кнопки) ... #}
                             </div>
-                            {% if ad.images.all.count > 1 %}
-                                <button class="carousel-control-prev" type="button" data-bs-target="#adCarousel" data-bs-slide="prev">
-                                    <span class="carousel-control-prev-icon" aria-hidden="true"></span>
-                                    <span class="visually-hidden">Previous</span>
-                                </button>
-                                <button class="carousel-control-next" type="button" data-bs-target="#adCarousel" data-bs-slide="next">
-                                    <span class="carousel-control-next-icon" aria-hidden="true"></span>
-                                    <span class="visually-hidden">Next</span>
-                                </button>
-                            {% endif %}
-                        </div>
-                    {% else %}
-                        {# ВИПРАВЛЕНО ШЛЯХ: static 'images/placeholder.png' #}
-                        <img src="{% static 'media/images/placeholder.png' %}" class="img-fluid rounded ad-detail-image" alt="Немає фото">
-                    {% endif %}
+                        {% else %}
+                            {# Виведення плейсхолдера, якщо зображення відсутні #}
+                            <img src="{% static 'media/images/placeholder.png' %}" class="img-fluid rounded ad-detail-image" alt="Немає фото">
+                        {% endif %}
+                    {% endwith %}
                 </div>
             </div>
             {# --- КІНЕЦЬ БЛОКУ ГАЛЕРЕЇ ЗОБРАЖЕНЬ --- #}
@@ -133,7 +135,7 @@
                         {{ ad.place|default:"Місце не вказано" }}
                     </p>
                     {# ВИПРАВЛЕНО ШЛЯХ: static 'images/map_placeholder.png' #}
-                    <img src="{% static 'images/map_placeholder.png' %}" class="img-fluid rounded" alt="Мапа">
+                    <img src="{% static 'images/placeholder.png' %}" class="img-fluid rounded" alt="Мапа">
                 </div>
             </div>
 
