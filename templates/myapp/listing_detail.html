@@ -16,24 +16,48 @@
                     <div class="row g-0">
                         <div class="col-md-3 position-relative">
 
-                            {% if ad.images.exists %}
-                                {% with img_obj=ad.images.first %}
-                                    {% cloudinary img_obj.image width=400 height=300 crop="fill" as cloudinary_url %}
+                             {% with images=ad.images.all %}
+                                {% if images.exists %}
+                                    <div id="adCarousel-{{ ad.id }}" class="carousel slide" data-bs-ride="carousel">
+                                        <div class="carousel-inner rounded">
+                                            {% for img_obj in images %}
+                                                {% if img_obj.image and img_obj.image.url %}
+                                                    <div class="carousel-item {% if forloop.first %}active{% endif %}">
+                                                        <a href="{% url 'ad_detail' slug=ad.slug %}">
+                                                            <img src="{{ img_obj.image.url }}"
+                                                                 class="d-block w-100 ad-management-img rounded-start"
+                                                                 alt="{{ ad.title|default:'Зображення' }}">
+                                                        </a>
+                                                    </div>
+                                                {% endif %}
+                                            {% endfor %}
+                                        </div>
+
+                                        {% if images|length > 1 %}
+                                            <button class="carousel-control-prev" type="button" data-bs-target="#adCarousel-{{ ad.id }}" data-bs-slide="prev">
+                                                <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                                                <span class="visually-hidden">Previous</span>
+                                            </button>
+                                            <button class="carousel-control-next" type="button" data-bs-target="#adCarousel-{{ ad.id }}" data-bs-slide="next">
+                                                <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                                                <span class="visually-hidden">Next</span>
+                                            </button>
+                                        {% endif %}
+                                    </div>
+                                {% elif ad.image %}
                                     <a href="{% url 'ad_detail' slug=ad.slug %}">
-                                        <img
-                                            src="{{ cloudinary_url }}"
-                                            alt="{{ ad.title|default:'Зображення' }}"
-                                            class="ad-management-img rounded-start w-100"
-                                        >
+                                        <img src="{{ ad.image.url }}"
+                                             alt="{{ ad.title|default:'Фото оголошення' }}"
+                                             class="ad-management-img rounded-start w-100">
                                     </a>
-                                {% endwith %}
-                            {% else %}
-                                <a href="{% url 'ad_detail' slug=ad.slug %}">
-                                    <img src="{% static 'media/images/placeholder.png' %}"
-                                         alt="Немає фото"
-                                         class="ad-management-img rounded-start w-100">
-                                </a>
-                            {% endif %}
+                                {% else %}
+                                    <a href="{% url 'ad_detail' slug=ad.slug %}">
+                                        <img src="{% static 'media/images/placeholder.png' %}"
+                                             alt="Немає фото"
+                                             class="ad-management-img rounded-start w-100">
+                                    </a>
+                                {% endif %}
+                            {% endwith %}
                         </div>
 
                         <div class="col-md-9">

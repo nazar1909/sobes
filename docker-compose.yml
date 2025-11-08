@@ -43,6 +43,8 @@ services:
 
   web:
     build: .
+    env_file:
+      - .env.local
     command: >
       sh -c "python manage.py migrate &&
              python manage.py collectstatic --noinput &&
@@ -56,6 +58,9 @@ services:
                --log-level info"
     volumes:
       - .:/app
+      - media_data:/app/media
+      - static_data:/app/staticfiles
+
     ports:
       - "8000:8000"
     environment:
@@ -80,6 +85,8 @@ services:
 
   celery:
     build: .
+    env_file:
+      - .env.local
     command: >
       sh -c "python manage.py wait_for_db &&
              celery -A sobes worker -l info"
@@ -107,3 +114,5 @@ services:
 
 volumes:
   postgres_data:
+  media_data:
+  static_data: #тільки що додав

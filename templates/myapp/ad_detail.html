@@ -16,39 +16,41 @@
                 </ol>
             </nav>
 
-            {# --- БЛОК ГАЛЕРЕЇ ЗОБРАЖЕНЬ (ВИПРАВЛЕНИЙ) --- #}
-            <div class="card shadow-sm mb-4 ad-gallery-block">
-                <div class="card-body p-2">
-                    {% with images=ad.images.all %}
-                        {% if images %}
-                            <div id="adCarousel" class="carousel slide" data-bs-ride="carousel">
-                                <div class="carousel-inner rounded">
-                                    {% for img_obj in images %}
-                                        <div class="carousel-item {% if forloop.first %}active{% endif %}">
+                {# --- БЛОК ГАЛЕРЕЇ ЗОБРАЖЕНЬ (ФІНАЛЬНА ВЕРСІЯ) --- #}
+                <div class="card shadow-sm mb-4 ad-gallery-block">
+                    <div class="card-body p-2">
 
-                                            {# 1. ГЕНЕРАЦІЯ ЧИСТОГО URL (БЕЗ ТЕГУ <img>) #}
-                                            {% cloudinary img_obj.image width=800 height=600 crop="fill" as cloudinary_url %}
-
-                                            {# 2. ВИКОРИСТАННЯ ЗМІННОЇ URL В АТРИБУТІ src #}
-                                            <img
-                                                src="{{ cloudinary_url }}"
-                                                class="d-block w-100 ad-detail-image"
-                                                alt="{{ ad.title|default:'Зображення' }}"
-                                            >
-
-                                        </div>
-                                    {% endfor %}
+                        {% with images=ad.images.all %}
+                            {% if images.exists %}
+                                <div id="adCarousel" class="carousel slide" data-bs-ride="carousel">
+                                    <div class="carousel-inner rounded">
+                                        {% for img_obj in images %}
+                                            {% if img_obj.image and img_obj.image.url %}
+                                                <div class="carousel-item {% if forloop.first %}active{% endif %}">
+                                                    <img src="{{ img_obj.image.url }}"
+                                                         class="d-block w-100 ad-detail-image"
+                                                         alt="{{ ad.title|default:'Зображення' }}">
+                                                </div>
+                                            {% endif %}
+                                        {% empty %}
+                                            <div class="carousel-item active">
+                                                <img src="{% static 'media/images/placeholder.png' %}"
+                                                     class="d-block w-100 ad-detail-image"
+                                                     alt="Немає фото">
+                                            </div>
+                                        {% endfor %}
+                                    </div>
                                 </div>
-                                {# ... (Навігаційні кнопки) ... #}
-                            </div>
-                        {% else %}
-                            {# Виведення плейсхолдера, якщо зображення відсутні #}
-                            <img src="{% static 'media/images/placeholder.png' %}" class="img-fluid rounded ad-detail-image" alt="Немає фото">
-                        {% endif %}
-                    {% endwith %}
+                            {% elif ad.image %}
+                                <img src="{{ ad.image.url }}" class="img-fluid rounded ad-detail-image" alt="{{ ad.title }}">
+                            {% else %}
+                                <img src="{% static 'media/images/placeholder.png' %}" class="img-fluid rounded ad-detail-image" alt="Немає фото">
+                            {% endif %}
+                        {% endwith %}
+
+                    </div>
                 </div>
-            </div>
-            {# --- КІНЕЦЬ БЛОКУ ГАЛЕРЕЇ ЗОБРАЖЕНЬ --- #}
+                {# --- КІНЕЦЬ БЛОКУ ГАЛЕРЕЇ --- #}
 
             <div class="card shadow-sm mb-4">
                 <div class="card-header bg-white border-0 pt-3">

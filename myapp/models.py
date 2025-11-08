@@ -33,28 +33,17 @@ class AD(models.Model):
     def save(self, *args, **kwargs):
         # 🔸 Генерація slug, якщо ще не створений
         if not self.slug:
-            # Використовуємо unidecode для транслітерації
             base_slug = slugify(unidecode(self.title)) or "ad"
             slug_candidate = base_slug
             counter = 1
-
-            # Перевіряємо унікальність slug
             while AD.objects.filter(slug=slug_candidate).exists():
-                # Якщо slug не унікальний, додаємо короткий унікальний суфікс (UUID)
-                # для забезпечення унікальності, щоб уникнути нескінченного циклу
                 slug_candidate = f"{base_slug}-{uuid.uuid4().hex[:6]}"
                 counter += 1
-
-                # Додатковий захист від занадто довгого циклу (хоча UUID робить це малоймовірним)
                 if counter > 10:
                     break
             self.slug = slug_candidate
 
-        # 🛑 ВИДАЛЕНО: Перевірка наявності зображень (вона має бути у views.py/Form/FormSet),
-        # оскільки пов'язані AdImage ще не існують під час першого збереження AD.
-
         super().save(*args, **kwargs)
-# images - це related_name у AdImage
 
     def get_absolute_url(self):
         return reverse('ad_detail', kwargs={'slug': self.slug})
@@ -90,15 +79,18 @@ class Profile(models.Model):
 
     @property
     def image_url(self):
-        # Якщо користувач має фото — повертаємо його
+        """Повертає основне фото або дефолтне"""
         if self.image and getattr(self.image, "url", None):
             return self.image.url.replace("http://", "https://")
-        # Інакше повертаємо дефолт
+
+        # Якщо немає головного фото, беремо перше з AdImage
+        first_image = self.images.first()
+        if first_image and getattr(first_image.image, "url", None):
+            return first_image.image.url.replace("http://", "https://")
+
+        # Якщо і там немає — повертаємо дефолт Cloudinary або static
         url, _ = cloudinary_url(DEFAULT_CLOUDINARY_IMAGE_ID, secure=True)
         return url
-
-    def get_full_name(self):
-        return self.full_name or self.user.get_full_name() or self.user.username
 
 
 @receiver(post_save, sender=User)
