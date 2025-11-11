@@ -6,7 +6,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data/
     environment:
-      POSTGRES_DB: TEST
+      POSTGRES_DB: sobes
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: 12345678
     ports:
@@ -64,7 +64,7 @@ services:
     ports:
       - "8000:8000"
     environment:
-      - POSTGRES_DB=TEST
+      - POSTGRES_DB=sobes
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=12345678
       - POSTGRES_HOST=db
