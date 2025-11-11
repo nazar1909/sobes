@@ -41,24 +41,19 @@ def bool_env(name, default=False):
 # Secret & Debug
 SECRET_KEY = get_env_variable('SECRET_KEY', 'django-insecure-PLACEHOLDER')
 DEBUG = bool_env('DEBUG', default=True)
+DJANGO_ENV = os.getenv("DJANGO_ENV", "local")
+
+if DJANGO_ENV == "local":
+    print("✅ Running in LOCAL mode")
+    DEBUG = True
+    ALLOWED_HOSTS = ["*"]
+    CSRF_TRUSTED_ORIGINS = ["http://localhost", "http://127.0.0.1"]
+else:
+    print("🚀 Running in PRODUCTION mode")
+    DEBUG = False
+
 
 # Hosts / CORS
-ALLOWED_HOSTS = os.environ.get("ALLOWED_HOSTS")
-
-if ALLOWED_HOSTS:
-    ALLOWED_HOSTS = ALLOWED_HOSTS.split(",")
-else:
-    ALLOWED_HOSTS = [
-        "localhost",
-        "127.0.0.1",
-        "sobes-app-production-d2a1.up.railway.app",
-        ".railway.app",
-        "*.up.railway.app"
-    ]# Для розвитку можна залишити '*', але у production краще передати список доменів у env.
-CSRF_TRUSTED_ORIGINS = [
-    "https://sobes-app-production-d2a1.up.railway.app",
-    "https://*.railway.app",
-]
 
 CORS_ALLOW_ALL_ORIGINS = bool_env('CORS_ALLOW_ALL_ORIGINS', default=False)
 
@@ -77,8 +72,28 @@ INSTALLED_APPS = [
     'django_celery_results',
     'cloudinary',
     'cloudinary_storage',
+    'rest_framework',
+    'drf_spectacular',
 ]
+REST_FRAMEWORK = {
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+        'rest_framework.authentication.SessionAuthentication',
+    ),
+    'DEFAULT_PERMISSION_CLASSES': (
+        'rest_framework.permissions.AllowAny',  # змінити на IsAuthenticated в потребі
+    ),
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.LimitOffsetPagination',
+    'PAGE_SIZE': 12,
+}
 
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'Sobes API',
+    'DESCRIPTION': 'API для OLX-like застосунку',
+    'VERSION': '1.0.0',
+    # 'SERVE_INCLUDE_SCHEMA': False,
+}
 CLOUDINARY_URL = os.environ.get('CLOUDINARY_URL')  # may be None
 CLOUDINARY_CLOUD_NAME = os.environ.get('CLOUDINARY_CLOUD_NAME')
 
@@ -138,7 +153,7 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 
 ]
-STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
+STATICFILES_STORAGE = 'cloudinary_storage.storage.StaticHashedCloudinaryStorage'
 
 ROOT_URLCONF = 'sobes.urls'
 
@@ -187,21 +202,21 @@ if db_url_from_env and db_url_from_env.strip():
     }
 
 # --- якщо локально, є Docker ---
-elif os.getenv("POSTGRES_DB") or os.getenv("DB_HOST") == "db":
+elif os.getenv("POSTGRES_HOST") == "db" or os.getenv("POSTGRES_DB"):
     print("🧩 Connecting to LOCAL PostgreSQL (Docker)...")
 
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.postgresql",
-            "NAME": os.getenv("POSTGRES_DB", "TEST"),
+            "NAME": os.getenv("POSTGRES_DB", "sobes"),
             "USER": os.getenv("POSTGRES_USER", "postgres"),
             "PASSWORD": os.getenv("POSTGRES_PASSWORD", "12345678"),
-            "HOST": os.getenv('POSTGRES_HOST', 'host.docker.internal'),
+            "HOST": os.getenv('POSTGRES_HOST', 'sobes-db.railway.internal'),
             "PORT": os.getenv("POSTGRES_PORT", "5432"),
         }
     }
 
-# --- fallback: SQLite ---
+
 else:
     print("💻 Connecting to LOCAL SQLite database...")
 
@@ -240,10 +255,6 @@ USE_TZ = True
 
 
 # Static files (CSS, JavaScript, Images)
-STATIC_URL = '/static/'
-STATICFILES_DIRS = [
-    os.path.join(BASE_DIR, "static"),
-]
 
 # Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
