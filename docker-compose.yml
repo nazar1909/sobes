@@ -64,12 +64,12 @@ services:
     ports:
       - "8000:8000"
     environment:
-      - POSTGRES_DB=sobes
+      - POSTGRES_DB=railway
       - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=12345678
+      - POSTGRES_PASSWORD=RDfXJdxuOtFWACcJbBGrfDVVgvDgOIvN
       - POSTGRES_HOST=sobes-db.railway.internal
       - DJANGO_SETTINGS_MODULE=sobes.settings
-      - DATABASE_URL=postgresql://postgres:12345678@sobes-db.railway.internal:5432/TEST
+      - DATABASE_URL=postgresql://postgres:RDfXJdxuOtFWACcJbBGrfDVVgvDgOIvN@postgres.railway.internal:5432/railway
       - REDIS_HOST=redis
       - RABBITMQ_HOST=rabbitmq
       - RABBITMQ_DEFAULT_USER=guest
