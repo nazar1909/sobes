@@ -67,9 +67,9 @@ services:
       - POSTGRES_DB=sobes
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=12345678
-      - POSTGRES_HOST=db
+      - POSTGRES_HOST=sobes-db.railway.internal
       - DJANGO_SETTINGS_MODULE=sobes.settings
-      - DATABASE_URL=postgresql://postgres:12345678@db:5432/TEST
+      - DATABASE_URL=postgresql://postgres:12345678@sobes-db.railway.internal:5432/TEST
       - REDIS_HOST=redis
       - RABBITMQ_HOST=rabbitmq
       - RABBITMQ_DEFAULT_USER=guest
