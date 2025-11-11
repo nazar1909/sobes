@@ -174,49 +174,40 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'sobes.wsgi.application'
 
-
-# --- беремо DATABASE_URL, якщо існує ---
 db_url_from_env = os.getenv("DATABASE_URL")
+DJANGO_ENV = os.getenv("DJANGO_ENV", "local")  # Припускаємо, що це визначено вище
 
-# --- якщо на Railway або є DATABASE_URL ---
+# --- якщо PRODUCTION (Railway/DATABASE_URL) ---
 if db_url_from_env and db_url_from_env.strip():
     print("✅ Connecting to PRODUCTION PostgreSQL database...")
 
-    # Додаємо sslmode=require, якщо його немає
-    if 'sslmode' not in db_url_from_env:
-        if '?' in db_url_from_env:
-            db_url_from_env += '&sslmode=require'
-        else:
-            db_url_from_env += '?sslmode=require'
-
-    if isinstance(db_url_from_env, bytes):
-        db_url_from_env = db_url_from_env.decode("utf-8")
-
     DATABASES = {
         "default": dj_database_url.config(
-            default=os.getenv("DATABASE_URL"),
+            default=db_url_from_env,  # Використовуємо саме цю змінну
             conn_max_age=600,
-            # Вимкніть ssl_require, оскільки ми додали його в URL:
-            # ssl_require=True
         )
     }
 
-# --- якщо локально, є Docker ---
-elif os.getenv("POSTGRES_HOST") == "db" or os.getenv("POSTGRES_DB"):
+# --- якщо LOCAL (Docker Compose) ---
+# Змінено умову: використовуємо DJANGO_ENV для пріоритету та POSTGRES_DB для індикації DB
+elif DJANGO_ENV == "local" and os.getenv("POSTGRES_DB"):
     print("🧩 Connecting to LOCAL PostgreSQL (Docker)...")
 
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.postgresql",
-            "NAME": os.getenv("POSTGRES_DB", "sobes"),
+            "NAME": os.getenv("POSTGRES_DB", "TEST"),
             "USER": os.getenv("POSTGRES_USER", "postgres"),
             "PASSWORD": os.getenv("POSTGRES_PASSWORD", "12345678"),
-            "HOST": os.getenv('POSTGRES_HOST', 'sobes-db.railway.internal'),
+
+            # 🟢 FIX: Хост має бути 'db' (Docker service name)
+            "HOST": os.getenv('POSTGRES_HOST', 'db'),
+
             "PORT": os.getenv("POSTGRES_PORT", "5432"),
         }
     }
 
-
+# --- fallback: SQLite ---
 else:
     print("💻 Connecting to LOCAL SQLite database...")
 
@@ -306,53 +297,50 @@ else:
         }
     }
 # ==============================================================================
-# 4. НАЛАШТУВАННЯ CELERY
+# 4. НАЛАШТУВАННЯ CELERY (ОНОВЛЕНО)
 # ==============================================================================
 
-# 🛑 АБСОЛЮТНА ПРИМУСОВА ПЕРЕВІРКА ДЛЯ ЛОКАЛЬНОГО SHELL/RUNSERVER
-# Визначаємо, чи ми виконуємо команду, яка вимагає синхронного режиму (shell, runserver, test)
-# Виключаємо Production, перевіряючи відсутність DATABASE_URL (найбільш надійний індикатор Railway)
-IS_LOCALLY_RUNNING = not os.environ.get('DATABASE_URL') and any(
-    arg in sys.argv for arg in ['shell', 'runserver', 'test', 'celery'])
+# Примітка: Припускається, що змінна DJANGO_ENV визначена як 'production' або 'local'
+# та що redis_url_from_env містить URL Redis.
 
-if IS_LOCALLY_RUNNING:
-    # --- ЯКЩО МИ ЛОКАЛЬНО (ПРИМУСОВИЙ EAGER РЕЖИМ) ---
-    print(">>> (FORCED LOCAL) Celery running in EAGER mode. RabbitMQ connection skipped.")
+# 1. СЕКЦІЯ PRODUCTION (RAILWAY)
+if DJANGO_ENV == "production":
+    print("🚀 Connecting to PRODUCTION Celery (RabbitMQ)...")
 
-    # Це примусово ігнорує будь-які RABBITMQ_HOST змінні
-    CELERY_BROKER_URL = 'memory://'
-    CELERY_TASK_ALWAYS_EAGER = True
-    CELERY_RESULT_BACKEND = 'django-db'
-
-# --- Логіка Production залишається чистою ---
-
-elif os.environ.get('RABBITMQ_HOST'):
-    # --- ЯКЩО МИ НА RAILWAY (PRODUCTION) ---
-    print("Connecting to PRODUCTION Celery (RabbitMQ)...")
-
+    # RabbitMQ Broker (Зазвичай RABBITMQ_HOST/USER/PASS надаються Railway)
     RABBITMQ_HOST = get_env_variable('RABBITMQ_HOST')
     RABBITMQ_USER = get_env_variable('RABBITMQ_DEFAULT_USER')
     RABBITMQ_PASS = get_env_variable('RABBITMQ_DEFAULT_PASS')
     RABBITMQ_PORT = get_env_variable('RABBITMQ_PORT')
 
+    # Формування Celery Broker URL
     CELERY_BROKER_URL = f'amqp://{RABBITMQ_USER}:{RABBITMQ_PASS}@{RABBITMQ_HOST}:{RABBITMQ_PORT}//'
 
+    # Результати Celery (Використовуємо Redis)
     if 'redis_url_from_env' in locals() and redis_url_from_env:
         print("Connecting to Celery results backend (Redis DB 2)...")
-        # Використовуємо Redis URL для Celery Broker (DB 1), а для Results Backend використовуємо DB 2.
-        # Спочатку перевіряємо, чи є номер БД у REDIS_URL.
+        celery_result_db_number = '2'
 
-        # Використовуємо змінну REDIS_URL для Celery.
-        # REDIS_URL має бути встановлений у .env або на Railway
-        celery_result_db_number = '2'  # Використовуйте іншу базу даних
-
-        # Це має виправити помилку '0/2'
+        # Використовуємо Redis URL для Results Backend (зміна номеру БД на /2)
+        # Це виправляє проблему конфлікту баз даних.
         CELERY_RESULT_BACKEND = re.sub(r'/[0-9]+$', f'/{celery_result_db_number}', redis_url_from_env)
-
     else:
-        CELERY_RESULT_BACKEND = None
+        # Fallback, якщо Redis не налаштований (не рекомендується)
+        CELERY_RESULT_BACKEND = 'django-db'
 
-# --- Стандарти Celery ---
+        # Встановлюємо EAGER в False для Production
+    CELERY_TASK_ALWAYS_EAGER = False
+
+# 2. СЕКЦІЯ LOCAL (DOCKER / DEV)
+else:  # Тобто, DJANGO_ENV == "local" або інший не-production
+    print(">>> (FORCED LOCAL) Celery running in EAGER mode. Using in-memory broker.")
+
+    # EAGER-режим для локальної розробки та виконання команд shell/test
+    CELERY_BROKER_URL = 'memory://'
+    CELERY_TASK_ALWAYS_EAGER = True
+    CELERY_RESULT_BACKEND = 'django-db'  # Зберігання результатів у локальній базі даних
+
+# --- Стандарти Celery (Загальні для обох режимів) ---
 CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
