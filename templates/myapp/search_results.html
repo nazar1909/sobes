@@ -1,0 +1,54 @@
+{% extends 'main/layout.html' %}
+{% load static %}
+
+{% block title %}Результати пошуку{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+
+  <h1 class="h2 mb-4">
+    Результати пошуку
+    {% if query %}для: <span class="text-primary">"{{ query }}"</span>{% endif %}
+  </h1>
+
+  {% if ads %}
+    {% for ad in ads %}
+      <div class="card shadow-sm mb-4 ad-management-card position-relative">
+        <div class="row g-0">
+          <div class="col-md-3">
+            {% if ad.images.all %}
+              <img src="{{ ad.images.first.image.url }}" class="ad-management-img" alt="{{ ad.title }}">
+            {% else %}
+              <img src="{% static 'media/images/placeholder.png' %}" class="ad-management-img" alt="Немає фото">
+            {% endif %}
+          </div>
+          <div class="col-md-9">
+            <div class="card-body">
+              <div class="d-flex justify-content-between align-items-start mb-2">
+                <h5 class="card-title mb-0">
+                  <a href="{% url 'ad_detail' slug=ad.slug %}" class="stretched-link text-decoration-none text-dark">
+                    {{ ad.title }}
+                  </a>
+                </h5>
+                <h4 class="text-dark fw-bold mb-0 ms-3">{{ ad.price|floatformat:0 }} грн</h4>
+              </div>
+
+              <p class="card-text text-muted small mb-3">
+                <i class="fa-solid fa-location-dot me-1"></i> {{ ad.place }}
+                <i class="fa-solid fa-calendar-day ms-3 me-1"></i> {{ ad.date|date:"d M Y" }}
+              </p>
+
+              <p class="card-text">{{ ad.description|truncatechars:150 }}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    {% endfor %}
+  {% else %}
+    <div class="text-center p-5 bg-light rounded">
+      <h3>Нічого не знайдено 😢</h3>
+      <p class="lead text-muted">Спробуйте інші ключові слова або інше місто.</p>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

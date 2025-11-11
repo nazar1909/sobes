@@ -12,6 +12,11 @@ from django.dispatch import receiver
 from cloudinary.utils import cloudinary_url
 
 
+import uuid
+from django.db import IntegrityError, transaction
+from django.utils.text import slugify
+from unidecode import unidecode
+
 class AD(models.Model):
     title = models.CharField(max_length=75)
     body = models.TextField(max_length=150)
@@ -30,20 +35,61 @@ class AD(models.Model):
     def __str__(self):
         return self.title
 
-    def save(self, *args, **kwargs):
-        # 🔸 Генерація slug, якщо ще не створений
-        if not self.slug:
-            base_slug = slugify(unidecode(self.title)) or "ad"
-            slug_candidate = base_slug
-            counter = 1
-            while AD.objects.filter(slug=slug_candidate).exists():
-                slug_candidate = f"{base_slug}-{uuid.uuid4().hex[:6]}"
-                counter += 1
-                if counter > 10:
-                    break
-            self.slug = slug_candidate
+    def _generate_base_slug(self):
+        # Генеруємо базовий slug із title або fallback 'ad'
+        base = slugify(unidecode(self.title)) if self.title else ''
+        return base or 'ad'
 
-        super().save(*args, **kwargs)
+    def save(self, *args, **kwargs):
+        # Якщо slug вже є — не змінюємо (щоб не ламати посилання)
+        if not self.slug:
+            base = self._generate_base_slug()
+
+            # Обмежуємо довжину бази так, щоб суфікс вмістився в поле
+            max_len = self._meta.get_field('slug').max_length
+            # Залишимо місце для суфікса "-n" або "-<uuid6>"
+            reserve = 8
+            base = base[: max_len - reserve]
+
+            candidate = base
+            counter = 1
+            tried_uuid = False
+
+            # Пробуємо кілька разів уникнути колізій у Python-процесі
+            while AD.objects.filter(slug=candidate).exclude(pk=self.pk).exists():
+                candidate = f"{base}-{counter}"
+                counter += 1
+                # Якщо занадто багато спроб — використаємо короткий uuid
+                if counter > 50:
+                    candidate = f"{base}-{uuid.uuid4().hex[:6]}"
+                    tried_uuid = True
+                    break
+
+            self.slug = candidate
+
+            # Збереження з захистом від race condition: якщо під час save іншій процес створив такий slug,
+            # ловимо IntegrityError і пробуємо ще раз кілька разів.
+            max_retries = 3
+            for attempt in range(max_retries):
+                try:
+                    with transaction.atomic():
+                        super().save(*args, **kwargs)
+                    return
+                except IntegrityError:
+                    # Якщо вже були uuid fallback — генеруємо ще один короткий uuid
+                    if tried_uuid:
+                        self.slug = f"{base}-{uuid.uuid4().hex[:6]}"
+                    else:
+                        # Якщо не було uuid, додаємо лічильник
+                        self.slug = f"{base}-{counter}"
+                        counter += 1
+                    tried_uuid = True
+                    # і пробуємо знову
+                    continue
+
+        else:
+            # Якщо slug вже є — проста операція збереження
+            super().save(*args, **kwargs)
 
     def get_absolute_url(self):
         return reverse('ad_detail', kwargs={'slug': self.slug})

@@ -30,6 +30,11 @@ class RegistrationForm(UserCreationForm):
 
 MAX_IMAGE_SIZE = 5 * 1024 * 1024  # 5 MB
 ALLOWED_MIME_PREFIX = 'image/'
+ALLOWED_CITIES = [
+    "Київ", "Львів", "Одеса", "Харків", "Дніпро",
+    "Вінниця", "Полтава", "Івано-Франківськ", "Чернівці",
+    "Ужгород", "Запоріжжя", "Миколаїв", "Хмельницький", "Рівне"
+]
 
 class AdForm(forms.ModelForm):
     class Meta:
@@ -47,8 +52,15 @@ class AdForm(forms.ModelForm):
         for field_name, attrs in field_attrs.items():
             if field_name in self.fields:
                 self.fields[field_name].widget.attrs.update({'class': 'form-control', **attrs})
+        if self.instance and getattr(self.instance, "place", None):
+            if self.instance.place not in ALLOWED_CITIES:
+                self.initial['place'] = ''
 
-
+    def clean_place(self):
+        place = self.cleaned_data.get('place').strip()
+        if place not in ALLOWED_CITIES:
+            raise ValidationError("❌ Вкажіть коректне місто зі списку." + ", ".join(ALLOWED_CITIES))
+        return place
 
 
 
@@ -111,7 +123,33 @@ class OrderForm(forms.Form):
     name = forms.CharField(label="Ім’я", max_length=100)
     email = forms.EmailField(label="Електронна пошта")
     phone = forms.CharField(label="Номер телефону", max_length=20)
+    comment = forms.CharField(
+        label="Коментар до замовлення",
+        max_length=300,
+        required=False,  # Коментар зазвичай необов'язковий
+        widget=forms.Textarea(attrs={'rows': 4, 'cols': 40})  # Встановлюємо початковий розмір
+    )
 
+    def clean_phone(self):
+        phone_number = self.cleaned_data['phone']
+
+        # 1. Перевірка, чи це рівно 9 символів
+        if len(phone_number) != 9:
+            raise forms.ValidationError("Номер телефону має містити рівно 9 цифр.")
+
+        # 2. Перевірка, чи це лише цифри
+        if not phone_number.isdigit():
+            raise forms.ValidationError("Номер телефону може містити лише цифри (0-9).")
+
+        # 3. Додаємо префікс +380 перед збереженням
+        return f"+380{phone_number}"
+
+    def __init__(self, *args, **kwargs):
+        user = kwargs.pop('user', None)
+        super().__init__(*args, **kwargs)
+        if user and user.is_authenticated:
+            self.fields['email'].initial = user.email
+            self.fields['name'].initial = user.get_full_name() or user.username
 
 class PasswordResetForm(forms.Form):
     email = forms.EmailField(label="Електронна пошта")
@@ -119,32 +157,54 @@ class PasswordResetForm(forms.Form):
 
 
 class ProfileForm(forms.ModelForm):
+    username = forms.CharField(
+        label='Імʼя користувача',
+        max_length=150,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Введіть імʼя користувача'
+        })
+    )
+    email = forms.EmailField(
+        label='Пошта',
+        required=False,
+        disabled=True,
+        widget=forms.EmailInput(attrs={
+            'class': 'form-control',
+        })
+    )
+
     class Meta:
         model = Profile
-        fields = ['full_name', 'bio', 'image', 'phone', 'location']
-        labels = {
-            'full_name': 'Імʼя користувача',
-            'bio': 'Опис',
-            'image': 'Фото профілю',
-            'phone': 'Телефон',
-            'location': 'Місцезнаходження',
-        }
+        fields = ['phone']  # тільки поля профілю
+        labels = {'phone': 'Телефон'}
         widgets = {
-            'full_name': forms.TextInput(attrs={
-                'class': 'form-control',
-                'placeholder': 'Введіть імʼя користувача'
-            }),
-            'bio': forms.Textarea(attrs={
-                'class': 'form-control',
-                'placeholder': 'Розкажіть про себе',
-                'rows': 3
-            }),
             'phone': forms.TextInput(attrs={
                 'class': 'form-control',
                 'placeholder': '+380XXXXXXXXX'
             }),
-            'location': forms.TextInput(attrs={
-                'class': 'form-control',
-                'placeholder': 'Ваше місто або країна'
-            }),
         }
+
+    def __init__(self, *args, **kwargs):
+        user = kwargs.pop('user', None)
+        super().__init__(*args, **kwargs)
+        if user:
+            self.user = user
+            # якщо username є — вставляємо
+            self.fields['username'].initial = user.username or ''
+            self.fields['email'].initial = user.email
+
+    def save(self, commit=True):
+        profile = super().save(commit=False)
+        if hasattr(self, 'user') and self.user:
+            user = self.user
+            username = self.cleaned_data.get('username', user.username)
+            if username.strip():  # якщо користувач не стер повністю
+                user.username = username
+            if commit:
+                user.save()
+                profile.user = user
+                profile.save()
+        elif commit:
+            profile.save()
+        return profile

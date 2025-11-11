@@ -24,6 +24,10 @@ from django.contrib.auth.forms import SetPasswordForm
 from django.contrib import messages
 from .forms import ProfileForm
 from django.db import transaction
+from django.http import JsonResponse
+from django.db.models import Q
+from .models import AD
+import logging
 
 
 # Create your views here.
@@ -61,24 +65,23 @@ def ad_detail(request, slug):
     return render(request, "myapp/ad_detail.html", {"ad": ad})
 @login_required
 def favorite_ads(request):
-    context = {
-        'ad': ad,
-        'cloudinary_url': ad.image.url if ad.image else None,
-    }
+
     ads = request.user.favorite_ads.all()  # через many-to-many
     return render(request, 'myapp/favorite_ads.html', {'ads': ads})
+
+logger = logging.getLogger(__name__)
+
 def order_ad(request, ad_id):
-    ad = AD.objects.get(pk=ad_id)
+    ad = get_object_or_404(AD, pk=ad_id)
 
     if request.method == "POST":
-        form = OrderForm(request.POST)
+        form = OrderForm(request.POST, user=request.user)
         if form.is_valid():
             name = form.cleaned_data["name"]
             email = form.cleaned_data["email"]
             phone = form.cleaned_data["phone"]
 
             subject = f"Замовлення на оголошення: {ad.title}"
-
             message = (
                 f"Деталі замовлення:\n\n"
                 f"Оголошення: {ad.title}\n"
@@ -88,19 +91,26 @@ def order_ad(request, ad_id):
                 f"Телефон: {phone}\n"
             )
 
-            # адреси одержувачів — покупець і продавець
             recipients = [email]
-            if hasattr(ad, "user") and ad.user.email:
+            if getattr(ad, 'user', None) and ad.user.email:
                 recipients.append(ad.user.email)
 
-            send_mail(subject, message, settings.DEFAULT_FROM_EMAIL, recipients)
+            try:
+                send_mail(subject, message, settings.DEFAULT_FROM_EMAIL, recipients, fail_silently=False)
+            except Exception as exc:
+                logger.exception("Помилка відправки пошти: %s", exc)
+                messages.warning(request, "Лист не вдалося відправити. Але замовлення надіслано.")
 
-            return render(request, "myapp/order_success.html", {"ad": ad})
-
+            return redirect('order_success')
+        else:
+            messages.error(request, "Перевірте правильність заповнення форми.")
     else:
-        form = OrderForm()
+        form = OrderForm(user=request.user)
 
     return render(request, "myapp/order_form.html", {"form": form, "ad": ad})
+
+def order_success(request):
+    return render(request, "myapp/order_success.html")
 
 
 def password_reset(request):
@@ -253,26 +263,32 @@ def ad_deactivate(request, slug):
 def ad_edit(request, slug):
     ad = get_object_or_404(AD, slug=slug)
 
-    # ❗ Захист — тільки власник може редагувати
+    # ❗ Тільки власник може редагувати
     if ad.user != request.user:
-        return redirect('ad_detail', slug=slug)
+        return HttpResponseForbidden("Ви не можете редагувати це оголошення")
+
+    # Підтягнемо всі фото, що належать цьому оголошенню
+    existing_images = AdImage.objects.filter(ad=ad)
 
     if request.method == 'POST':
-        # form тепер обробляє AD.image
         form = AdForm(request.POST, request.FILES, instance=ad)
+        formset = AdImageFormSet(request.POST, request.FILES, queryset=existing_images, instance=ad)
 
-        # formset ВИДАЛЕНО
-        if form.is_valid():
-            form.save()
-            # formset.save() БІЛЬШЕ НЕ ПОТРІБНО
+        if form.is_valid() and formset.is_valid():
+            with transaction.atomic():
+                form.save()
+                formset.save()
+            messages.success(request, "Оголошення оновлено ✅")
             return redirect('ad_detail', slug=ad.slug)
+        else:
+            messages.error(request, "Будь ласка, перевірте форму — є помилки.")
     else:
         form = AdForm(instance=ad)
-        # formset ВИДАЛЕНО
+        formset = AdImageFormSet(queryset=existing_images, instance=ad)
 
     return render(request, 'myapp/ad_form.html', {
         'form': form,
-        # 'formset': formset, БІЛЬШЕ НЕ ПОТРІБНО
+        'formset': formset,
         'is_edit': True,
         'ad': ad
     })
@@ -316,16 +332,17 @@ def toggle_favorite(request, slug):
 @login_required
 def edit_profile(request):
     profile = request.user.profile
+
     if request.method == 'POST':
-        form = ProfileForm(request.POST, request.FILES, instance=profile)
+        form = ProfileForm(request.POST, request.FILES, instance=profile, user=request.user)
         if form.is_valid():
             form.save()
             messages.success(request, "Профіль оновлено ✅")
             return redirect('edit_profile')
     else:
-        form = ProfileForm(instance=profile)
-    return render(request, 'myapp/edit_profile.html', {'form': form})
+        form = ProfileForm(instance=profile, user=request.user)
 
+    return render(request, 'myapp/edit_profile.html', {'form': form})
 
 @login_required
 def my_profile(request):
@@ -335,4 +352,45 @@ def my_profile(request):
     return render(request, 'myapp/my_profile.html', {
         'profile': profile,
         'ads': user_ads
+    })
+
+def search_ads(request):
+    query = request.GET.get('q', '').strip()
+    place = request.GET.get('place', '').strip()
+
+    ads = AD.objects.all()
+
+    # 🔍 Пошук за назвою або описом
+    if query:
+        ads = ads.filter(
+            Q(title__icontains=query) | Q(body__icontains=query)
+        )
+
+    # 📍 Фільтр за місцем
+    if place and place.lower() != 'уся україна':
+        ads = ads.filter(place__icontains=place)
+
+    context = {
+        'ads': ads,
+        'query': query,
+        'place': place,
+    }
+
+    return render(request, 'myapp/search_results.html', context)
+def ad_suggestions(request):
+    q = request.GET.get('q', '').strip()
+    if not q or len(q) < 2:
+        return JsonResponse([], safe=False)
+    q = q[:200]
+    ads = AD.objects.filter(Q(title__icontains=q) | Q(body__icontains=q)).values_list('title', flat=True)[:8]
+    return JsonResponse(list(ads), safe=False)
+def public_profile(request, username):
+    user = get_object_or_404(User, username=username)
+    ads = AD.objects.filter(user=user).order_by('-date')
+    profile = getattr(user, 'profile', None)
+
+    return render(request, 'myapp/public_profile.html', {
+        'profile_user': user,
+        'profile': profile,
+        'ads': ads,
     })

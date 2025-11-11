@@ -8,24 +8,55 @@
     <div class="row">
         <div class="col-md-10 offset-md-1">
 
-            <form action="#" method="GET" class="search-bar d-flex shadow-sm">
-
-                <div class="search-field flex-grow-1">
-                    <i class="fa fa-search search-icon"></i>
-                    <input type="text" class="form-control" name="q" placeholder="Що шукаєте?">
+            <!-- ✅ Змінив action, щоб відправляло на search_ads -->
+            <form action="{% url 'search_ads' %}" method="GET" class="search-bar d-flex shadow-sm" novalidate>
+              <div class="search-field flex-grow-1 position-relative"> <!-- position-relative here -->
+                <i class="fa fa-search search-icon"></i>
+                <input
+                    type="text"
+                    id="search-input"
+                    class="search-input form-control"
+                    name="q"
+                    placeholder="Що шукаєте?"
+                    value="{{ request.GET.q }}"
+                    autocomplete="off"
+                    aria-autocomplete="list"
+                    aria-controls="suggestions"
+                    aria-expanded="false"
+                    role="combobox"
+                    aria-haspopup="listbox"
+                    aria-activedescendant=""
+                >
+                <!-- Suggestions dropdown -->
+                <div id="suggestions"
+                     class="suggestions dropdown-menu w-100"
+                     role="listbox"
+                     aria-label="Підказки пошуку"
+                     style="display:none; z-index:1000;">
                 </div>
+              </div>
 
-                <div class="search-field flex-grow-1">
-                    <i class="fa fa-location-dot search-icon"></i>
-                    <input type="text" class="form-control" name="location" placeholder="Уся Україна">
-                </div>
+              <!-- 📍 Поле локації -->
+              <div class="search-field flex-grow-1">
+                <i class="fa fa-location-dot search-icon"></i>
+                <input
+                  type="text"
+                  id="place-input"
+                  class="form-control"
+                  name="place"
+                  placeholder="Уся Україна"
+                  value="{{ request.GET.place }}"
+                  autocomplete="off"
+                >
+                <div id="place-suggestions" class="suggestions"></div>
+              </div>
 
-                <button type="submit" class="btn btn-dark search-button">
-                    <strong>Пошук</strong> <i class="fa fa-search"></i>
-                </button>
+              <button type="submit" class="btn btn-dark search-button">
+                <strong>Пошук</strong> <i class="fa fa-search"></i>
+              </button>
             </form>
 
-            </div>
+        </div>
     </div>
 </div>
 
@@ -60,4 +91,101 @@
 
     </div>
 </footer>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  // -----------------
+  // Поле "Що шукаєте?"
+  // -----------------
+  const titleInput = document.querySelector('input[name="q"]');
+  const titleBox = document.querySelector('#suggestions'); // ✅ використовуємо вже існуючий div
+
+  titleInput.addEventListener("input", async function () {
+    const query = this.value.trim();
+    if (query.length < 2) {
+      titleBox.classList.remove("active");
+      titleBox.style.display = "none";
+      return;
+    }
+
+    try {
+      const response = await fetch(`/ajax/suggestions/?q=${encodeURIComponent(query)}`);
+      if (!response.ok) return;
+      const data = await response.json();
+
+      if (data.length === 0) {
+        titleBox.classList.remove("active");
+        titleBox.style.display = "none";
+        return;
+      }
+
+      titleBox.innerHTML = data
+        .map(item => `<div class="suggestion-item">${item}</div>`)
+        .join("");
+      titleBox.classList.add("active");
+      titleBox.style.display = "block";
+
+      titleBox.querySelectorAll(".suggestion-item").forEach(item => {
+        item.addEventListener("click", () => {
+          titleInput.value = item.textContent;
+          titleBox.classList.remove("active");
+          titleBox.style.display = "none";
+        });
+      });
+    } catch (e) {
+      console.error("Error fetching title suggestions:", e);
+    }
+  });
+
+  // -----------------
+  // Поле "Локація" (без бази)
+  // -----------------
+  const placeInput = document.querySelector('input[name="place"]');
+  const placeBox = document.querySelector('#place-suggestions'); // ✅ використовуємо вже наявний div
+
+  if (!placeInput || !placeBox) {
+    console.error("❌ Не знайдено поле або блок для підказок місця!");
+    return;
+  }
+
+  const cities = [
+    "Київ", "Львів", "Одеса", "Харків", "Дніпро",
+    "Вінниця", "Полтава", "Івано-Франківськ", "Чернівці",
+    "Ужгород", "Запоріжжя", "Миколаїв", "Хмельницький", "Рівне"
+  ];
+
+  placeInput.addEventListener("input", function () {
+    const query = this.value.trim().toLowerCase();
+    if (query.length < 2) {
+      placeBox.classList.remove("active");
+      placeBox.style.display = "none";
+      return;
+    }
+
+    const filtered = cities.filter(city => city.toLowerCase().includes(query));
+    if (filtered.length === 0) {
+      placeBox.classList.remove("active");
+      placeBox.style.display = "none";
+      return;
+    }
+
+    placeBox.innerHTML = filtered
+      .map(item => `<div class="suggestion-item">${item}</div>`)
+      .join("");
+    placeBox.classList.add("active");
+    placeBox.style.display = "block";
+
+    placeBox.querySelectorAll(".suggestion-item").forEach(item => {
+      item.addEventListener("click", () => {
+        placeInput.value = item.textContent;
+        placeBox.classList.remove("active");
+        placeBox.style.display = "none";
+      });
+    });
+  });
+});
+</script>
+
+
+
 {% endblock %}

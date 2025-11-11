@@ -1,7 +1,233 @@
-<h2>Замовлення оголошення: {{ ad.title }}</h2>
+{% extends 'main/layout.html' %}
+{% load static %}
+{% load widget_tweaks %}  {# ЦЕЙ ТЕГ НЕОБХІДНИЙ ДЛЯ РОБОТИ |add_class #}
 
-<form method="post">
-    {% csrf_token %}
-    {{ form.as_p }}
-    <button type="submit">Надіслати замовлення</button>
-</form>
+{% block content %}
+<div class="order-form-container">
+  <div class="order-card shadow-lg p-5 rounded-4">
+    <h2 class="mb-4 text-center text-gradient display-6 fw-bold">
+      <i class="fa-solid fa-shield-halved me-3"></i> Оформлення замовлення
+    </h2>
+    <hr class="divider-gradient mb-4">
+
+    {# Підсумок оголошення #}
+    <div class="ad-summary mb-5 p-3 rounded-3 bg-light-purple">
+      <h4 class="text-dark fw-bold mb-2">{{ ad.title|default:"Назва оголошення" }}</h4>
+      <p class="text-secondary mb-1">
+        <i class="fa-solid fa-tag me-2 text-primary-dark"></i> Категорія: {{ ad.category|default:"Не вказано" }}
+      </p>
+      <div class="d-flex justify-content-between align-items-center mt-3">
+        <span class="text-primary-dark fw-bold h4 mb-0">
+          <i class="fa-solid fa-wallet me-2"></i> Вартість:
+        </span>
+        <span class="text-success fw-bolder h3 mb-0">{{ ad.price|default:"3762.00" }} грн</span>
+      </div>
+    </div>
+
+    <form method="post" novalidate class="needs-validation">
+      {% csrf_token %}
+
+      {# Поле: Ім'я #}
+      <div class="mb-4">
+        <label for="{{ form.name.id_for_label }}" class="form-label fw-semibold text-primary-dark">
+          <i class="fa-solid fa-user me-2"></i> {{ form.name.label }}
+        </label>
+        {{ form.name|add_class:"form-control form-control-lg custom-input" }}
+        <div class="invalid-feedback">Будь ласка, введіть ваше ім’я.</div>
+      </div>
+
+      {# Поле: Електронна пошта #}
+      <div class="mb-4">
+        <label for="{{ form.email.id_for_label }}" class="form-label fw-semibold text-primary-dark">
+          <i class="fa-solid fa-envelope me-2"></i> {{ form.email.label }}
+        </label>
+        {{ form.email|add_class:"form-control form-control-lg custom-input" }}
+        <div class="invalid-feedback">Вкажіть коректну електронну пошту.</div>
+      </div>
+
+      {# Поле: Номер телефону (МОДИФІКОВАНО) #}
+      <div class="mb-5">
+        <label for="{{ form.phone.id_for_label }}" class="form-label fw-semibold text-primary-dark">
+          <i class="fa-solid fa-phone me-2"></i> {{ form.phone.label }}
+        </label>
+        <div class="input-group input-group-lg">
+          <span class="input-group-text phone-prefix-text" id="phone-prefix">+380</span>
+
+            {{ form.phone|add_class:"form-control custom-input-phone"|attr:"placeholder:XX XXX XX XX"|attr:"maxlength:9"|attr:"inputmode:numeric"|attr:"pattern:[0-9]{9}" }}
+
+          <div class="invalid-feedback">Введіть правильні 9 цифр номера телефону.</div>
+        </div>
+      </div>
+
+      <div class="mb-5">
+        <label for="{{ form.comment.id_for_label }}" class="form-label fw-semibold text-primary-dark">
+          <i class="fa-solid fa-comment-dots me-2"></i> {{ form.comment.label }}
+            <span class="text-muted fw-normal ms-2 small">(необов'язково)</span>
+        </label>
+        {{ form.comment|add_class:"form-control custom-textarea"|attr:"rows:4" }}
+      </div>
+
+      {# Кнопка відправки #}
+      <button type="submit" class="btn btn-gradient w-100 btn-lg pulse-effect">
+        <i class="fa-solid fa-paper-plane me-2"></i> Надіслати замовлення
+      </button>
+    </form>
+  </div>
+</div>
+
+<style>
+/* ... (СТИЛІ З ПОПЕРЕДНЬОГО ВІДПОВІДІ ЗАЛИШАЮТЬСЯ) ... */
+:root {
+  --primary-start: #7209b7; /* Фіолетовий */
+  --primary-end: #f72585; /* Рожевий */
+  --text-dark: #4B0082; /* Темно-фіолетовий для тексту */
+  --bg-light: #e0f7fa; /* Дуже світлий фон */
+}
+
+.order-form-container {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  min-height: 100vh;
+  background: radial-gradient(circle at top left, #f5f7fa, #e4ecf4);
+  padding: 60px 20px;
+}
+
+.order-card {
+
+  max-width: 550px;
+  width: 100%;
+  border: 1px solid rgba(114, 9, 183, 0.1);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+  transition: all 0.3s ease;
+}
+.order-card:hover {
+  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.2);
+}
+
+.text-gradient {
+  background: linear-gradient(45deg, var(--primary-start),#FFFF00);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.divider-gradient {
+  height: 3px;
+  background: linear-gradient(90deg, var(--primary-start), #006b1b);
+  border: 0;
+  opacity: 0.7;
+}
+
+.bg-light-purple {
+  background-color: #f3e5f5;
+  border-left: 5px solid #006b1b);
+}
+.text-primary-dark {
+  color: var(--text-dark) !important;
+}
+
+.custom-input {
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  padding: 12px 15px;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.05);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.custom-input:focus {
+  border-color: var(--primary-start);
+  box-shadow: 0 0 0 0.25rem rgba(114, 9, 183, 0.25);
+}
+
+/* Спеціальний стиль для поля телефону */
+.phone-prefix-text {
+  background-color: #f8f9fa; /* Світло-сірий фон */
+  color: var(--text-dark);
+  font-weight: 600;
+  border: 1px solid #ccc;
+  border-right: none;
+  border-top-left-radius: 8px !important;
+  border-bottom-left-radius: 8px !important;
+}
+
+.custom-input-phone {
+  border-top-left-radius: 0 !important;
+  border-bottom-left-radius: 0 !important;
+  border: 1px solid #ccc;
+  border-left: none;
+  padding: 12px 15px;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.05);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.custom-input-phone:focus {
+  border-color: var(--primary-start);
+  box-shadow: 0 0 0 0.25rem rgba(114, 9, 183, 0.25);
+}
+/* Кінець спеціального стилю */
+
+.btn-gradient {
+  background: linear-gradient(90deg, var(--primary-start), #FFFF00);
+  color: white;
+  font-weight: 700;
+  border: none;
+  border-radius: 12px;
+  padding: 15px 25px;
+  transition: all 0.3s ease-in-out;
+  position: relative;
+  overflow: hidden;
+  z-index: 1;
+}
+.btn-gradient:hover {
+  opacity: 0.95;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 15px rgba(114, 9, 183, 0.4);
+}
+
+@keyframes pulse {
+  0% { box-shadow: 0 0 0 0 #006b1b; }
+  70% { box-shadow: 0 0 0 10px rgba(247, 37, 133, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(247, 37, 133, 0); }
+}
+.pulse-effect {
+  animation: pulse 2s infinite;
+}
+
+@media (max-width: 576px) {
+  .order-card {
+    padding: 30px !important;
+  }
+  .display-6 {
+    font-size: 1.8rem !important;
+  }
+  .btn-lg {
+    font-size: 1rem;
+    padding: 12px 20px;
+  }
+}
+</style>
+
+<script>
+// Валідація Bootstrap
+(() => {
+  'use strict';
+  const forms = document.querySelectorAll('.needs-validation');
+  Array.from(forms).forEach(form => {
+    form.addEventListener('submit', event => {
+      // Перевірка, чи поле телефону містить рівно 9 символів (якщо використовується тільки частина номера)
+      const phoneInput = form.querySelector('.custom-input-phone');
+      if (phoneInput && phoneInput.value.length !== 9) {
+          phoneInput.setCustomValidity('Введіть 9 цифр номера телефону.');
+      } else if (phoneInput) {
+          phoneInput.setCustomValidity(''); // Очистити, якщо валідно
+      }
+
+
+      if (!form.checkValidity()) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
+      form.classList.add('was-validated');
+    }, false);
+  });
+})();
+</script>
+{% endblock %}

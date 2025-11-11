@@ -1,97 +1,53 @@
 {% extends 'main/layout.html' %}
 {% load static %}
-{% load cloudinary %}
 
-{% block title %}Всі оголошення{% endblock %}
+{% block title %}Усі оголошення{% endblock %}
 
 {% block content %}
 <div class="container-fluid">
-
-    <h1 class="h2 mb-4">Всі оголошення</h1>
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h2">Усі оголошення</h1>
+        <a href="{% url 'ad_create' %}" class="btn btn-primary-dark">
+            + Додати оголошення
+        </a>
+    </div>
 
     <div class="profile-ads-container">
         {% if ads %}
             {% for ad in ads %}
-                <div class="card shadow-sm ad-management-card mb-3 position-relative">
+                <div class="card shadow-sm mb-4 ad-management-card position-relative">
                     <div class="row g-0">
-                        <div class="col-md-3 position-relative">
-
-                             {% with images=ad.images.all %}
-                                {% if images.exists %}
-                                    <div id="adCarousel-{{ ad.id }}" class="carousel slide" data-bs-ride="carousel">
-                                        <div class="carousel-inner rounded">
-                                            {% for img_obj in images %}
-                                                {% if img_obj.image and img_obj.image.url %}
-                                                    <div class="carousel-item {% if forloop.first %}active{% endif %}">
-                                                        <a href="{% url 'ad_detail' slug=ad.slug %}">
-                                                            <img src="{{ img_obj.image.url }}"
-                                                                 class="d-block w-100 ad-management-img rounded-start"
-                                                                 alt="{{ ad.title|default:'Зображення' }}">
-                                                        </a>
-                                                    </div>
-                                                {% endif %}
-                                            {% endfor %}
-                                        </div>
-
-                                        {% if images|length > 1 %}
-                                            <button class="carousel-control-prev" type="button" data-bs-target="#adCarousel-{{ ad.id }}" data-bs-slide="prev">
-                                                <span class="carousel-control-prev-icon" aria-hidden="true"></span>
-                                                <span class="visually-hidden">Previous</span>
-                                            </button>
-                                            <button class="carousel-control-next" type="button" data-bs-target="#adCarousel-{{ ad.id }}" data-bs-slide="next">
-                                                <span class="carousel-control-next-icon" aria-hidden="true"></span>
-                                                <span class="visually-hidden">Next</span>
-                                            </button>
-                                        {% endif %}
-                                    </div>
-                                {% elif ad.image %}
-                                    <a href="{% url 'ad_detail' slug=ad.slug %}">
-                                        <img src="{{ ad.image.url }}"
-                                             alt="{{ ad.title|default:'Фото оголошення' }}"
-                                             class="ad-management-img rounded-start w-100">
-                                    </a>
-                                {% else %}
-                                    <a href="{% url 'ad_detail' slug=ad.slug %}">
-                                        <img src="{% static 'media/images/placeholder.png' %}"
-                                             alt="Немає фото"
-                                             class="ad-management-img rounded-start w-100">
-                                    </a>
-                                {% endif %}
-                            {% endwith %}
+                        <div class="col-md-3">
+                            {% if ad.images.all %}
+                                <img src="{{ ad.images.first.image.url }}" class="ad-management-img" alt="{{ ad.title }}">
+                            {% else %}
+                                <img src="{% static 'media/images/placeholder.png' %}" class="ad-management-img" alt="Немає фото">
+                            {% endif %}
                         </div>
 
                         <div class="col-md-9">
-                            <div class="card-body position-relative h-100 d-flex flex-column">
-
+                            <div class="card-body">
                                 <div class="d-flex justify-content-between align-items-start mb-2">
                                     <h5 class="card-title mb-0">
-                                        <a href="{% url 'ad_detail' slug=ad.slug %}"
-                                           class="stretched-link text-decoration-none text-dark">
+                                        <a href="{% url 'ad_detail' slug=ad.slug %}" class="stretched-link text-decoration-none text-dark">
                                             {{ ad.title }}
                                         </a>
                                     </h5>
-                                    <h5 class="ad-price text-dark fw-bold mb-0 ms-3">
-                                        {{ ad.price|floatformat:0 }} грн
-                                    </h5>
+                                    <h4 class="text-dark fw-bold mb-0 ms-3">{{ ad.price|floatformat:0 }} грн</h4>
                                 </div>
 
-                                <div class="mt-auto">
-                                    <p class="card-text small text-muted mb-0 mt-2">
-                                        <i class="fa-solid fa-location-dot me-1"></i> {{ ad.place|default:"Місце не вказано" }}
-                                        <span class="mx-2">•</span>
-                                        <i class="fa-regular fa-calendar-days me-1"></i> {{ ad.date|date:"d M Y" }}
-                                    </p>
-                                </div>
+                                <p class="card-text text-muted small mb-3">
+                                    <i class="fa-solid fa-location-dot me-1"></i>
+                                    {{ ad.place|default:"Місце не вказано" }}
+                                    <i class="fa-solid fa-calendar-day ms-3 me-1"></i>
+                                    Опубліковано: {{ ad.date|date:"d M Y" }}
+                                </p>
 
-                                {% if user.is_authenticated and ad.user != user %}
-                                    <a href="{% url 'toggle_favorite' slug=ad.slug %}"
-                                       class="favorite-icon position-absolute bottom-0 end-0 m-2"
-                                       onclick="event.preventDefault(); toggleFavorite('{{ ad.slug }}');">
-                                        <i id="heart-{{ ad.slug }}"
-                                           class="fa{% if user in ad.favorites.all %}-solid{% else %}-regular{% endif %} fa-heart">
-                                        </i>
-                                    </a>
-                                {% endif %}
+                                <div class="d-flex flex-wrap align-items-center text-muted small mb-3 ad-stats">
+                                    <span class="me-3"><i class="fa-solid fa-eye me-1"></i> {{ ad.views|default:"0" }}</span>
+                                    <span class="me-3"><i class="fa-solid fa-heart me-1"></i> {{ ad.favorites_count|default:"0" }}</span>
+                                    <a href="#" class="btn btn-link btn-sm p-0 fw-bold position-relative"><i class="fa-solid fa-message me-1"></i> {{ ad.message_count|default:"0" }}</a>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -99,14 +55,13 @@
             {% endfor %}
         {% else %}
             <div class="text-center p-5 bg-light rounded">
-                <h3>Оголошень ще немає</h3>
-                <p class="lead text-muted">Будьте першим, хто додасть оголошення!</p>
+                <h3>Немає оголошень</h3>
+                <p class="lead text-muted">Поки що тут порожньо</p>
                 <a href="{% url 'ad_create' %}" class="btn btn-primary-dark btn-lg mt-3">
                     Створити оголошення
                 </a>
             </div>
         {% endif %}
     </div>
-
 </div>
 {% endblock %}

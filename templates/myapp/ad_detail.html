@@ -1,147 +1,199 @@
 {% extends 'main/layout.html' %}
 {% load static %}
 {% load cloudinary %}
+
 {% block title %}{{ ad.title }}{% endblock %}
 
 {% block content %}
 <div class="container-fluid ad-detail-page">
-    <div class="row">
-        <div class="col-lg-8">
+  <div class="row">
+    <div class="col-lg-8">
 
-            <nav aria-label="breadcrumb" class="mb-2">
-                <ol class="breadcrumb bg-light p-2 rounded">
-                    <li class="breadcrumb-item"><a href="{% url 'listing_detail' %}">Всі оголошення</a></li>
+      <nav aria-label="breadcrumb" class="mb-2">
+        <ol class="breadcrumb bg-light p-2 rounded">
+          <li class="breadcrumb-item">
+            <a href="{% url 'listing_detail' %}">Всі оголошення</a>
+          </li>
+          <li class="breadcrumb-item active" aria-current="page">
+            {{ ad.title }}
+          </li>
+        </ol>
+      </nav>
 
-                    <li class="breadcrumb-item active" aria-current="page">{{ ad.title }}</li>
-                </ol>
-            </nav>
+      {# --- БЛОК ГАЛЕРЕЇ ЗОБРАЖЕНЬ (ФІНАЛЬНА ВЕРСІЯ) --- #}
+      <div class="card shadow-sm mb-4 ad-gallery-block">
+        <div class="card-body p-2">
 
-                {# --- БЛОК ГАЛЕРЕЇ ЗОБРАЖЕНЬ (ФІНАЛЬНА ВЕРСІЯ) --- #}
-                <div class="card shadow-sm mb-4 ad-gallery-block">
-                    <div class="card-body p-2">
-
-                        {% with images=ad.images.all %}
-                            {% if images.exists %}
-                                <div id="adCarousel" class="carousel slide" data-bs-ride="carousel">
-                                    <div class="carousel-inner rounded">
-                                        {% for img_obj in images %}
-                                            {% if img_obj.image and img_obj.image.url %}
-                                                <div class="carousel-item {% if forloop.first %}active{% endif %}">
-                                                    <img src="{{ img_obj.image.url }}"
-                                                         class="d-block w-100 ad-detail-image"
-                                                         alt="{{ ad.title|default:'Зображення' }}">
-                                                </div>
-                                            {% endif %}
-                                        {% empty %}
-                                            <div class="carousel-item active">
-                                                <img src="{% static 'media/images/placeholder.png' %}"
-                                                     class="d-block w-100 ad-detail-image"
-                                                     alt="Немає фото">
-                                            </div>
-                                        {% endfor %}
-                                    </div>
-                                </div>
-                            {% elif ad.image %}
-                                <img src="{{ ad.image.url }}" class="img-fluid rounded ad-detail-image" alt="{{ ad.title }}">
-                            {% else %}
-                                <img src="{% static 'media/images/placeholder.png' %}" class="img-fluid rounded ad-detail-image" alt="Немає фото">
-                            {% endif %}
-                        {% endwith %}
-
+          {% with images=ad.images.all %}
+            {% if images.exists %}
+              <div id="adCarousel" class="carousel slide" data-bs-ride="carousel">
+                <div class="carousel-inner rounded">
+                  {% for img_obj in images %}
+                    {% if img_obj.image and img_obj.image.url %}
+                      <div class="carousel-item {% if forloop.first %}active{% endif %}">
+                        <img src="{{ img_obj.image.url }}"
+                             class="d-block w-100 ad-detail-image"
+                             alt="{{ ad.title|default:'Зображення' }}">
+                      </div>
+                    {% endif %}
+                  {% empty %}
+                    <div class="carousel-item active">
+                      <img src="{% static 'media/images/placeholder.png' %}"
+                           class="d-block w-100 ad-detail-image"
+                           alt="Немає фото">
                     </div>
+                  {% endfor %}
                 </div>
-                {# --- КІНЕЦЬ БЛОКУ ГАЛЕРЕЇ --- #}
+              </div>
+            {% elif ad.image %}
+              <img src="{{ ad.image.url }}" class="img-fluid rounded ad-detail-image" alt="{{ ad.title }}">
+            {% else %}
+              <img src="{% static 'media/images/placeholder.png' %}" class="img-fluid rounded ad-detail-image" alt="Немає фото">
+            {% endif %}
+          {% endwith %}
 
-            <div class="card shadow-sm mb-4">
-                <div class="card-header bg-white border-0 pt-3">
-                    <ul class="nav nav-tabs">
-                        <li class="nav-item">
-                            <a class="nav-link active" href="#">Опис</a>
-                        </li>
-                    </ul>
-                </div>
-                <div class="card-body">
-                    <div class="d-flex flex-wrap gap-3 text-muted small mb-3">
-                        <span><i class="fa-solid fa-user me-1"></i> Приватна особа</span>
-                        {# Приклад: Стан оголошення, якщо є в моделі #}
-                        {# <span><i class="fa-solid fa-star me-1"></i> Стан: {{ ad.condition|default:"Вживане" }}</span> #}
-                        <span><i class="fa-solid fa-tag me-1"></i> Марка: {{ ad.brand|default:"Інша" }}</span>
-                    </div>
+        </div>
+      </div>
+      {# --- КІНЕЦЬ БЛОКУ ГАЛЕРЕЇ --- #}
 
-                    <h5 class="mb-3">Опис</h5>
-                    {# ВИПРАВЛЕНО: ad.body замість ad.description #}
-                    <p class="card-text" style="white-space: pre-wrap;">{{ ad.body|default:"Опис відсутній." }}</p>
+      <div class="card shadow-sm mb-4">
+        <div class="card-header bg-white border-0 pt-3">
+          <ul class="nav nav-tabs">
+            <li class="nav-item">
+              <a class="nav-link active" href="#">Опис</a>
+            </li>
+          </ul>
+        </div>
 
-                    <hr>
-                    <div class="d-flex justify-content-between text-muted small">
-                        {# <span>ID: {{ ad.id }}</span> #}
-                        {# Приклад: Реальна кількість переглядів #}
-                        <span>Переглядів: {{ ad.views|default:"0" }}</span>
-                    </div>
-                </div>
+        <div class="card-body">
+          <div class="d-flex flex-wrap gap-3 text-muted small mb-3">
+            <span><i class="fa-solid fa-user me-1"></i> Приватна особа</span>
+            {# <span><i class="fa-solid fa-star me-1"></i> Стан: {{ ad.condition|default:"Вживане" }}</span> #}
+            <span><i class="fa-solid fa-tag me-1"></i> Марка: {{ ad.brand|default:"Інша" }}</span>
+          </div>
+
+          <h5 class="mb-3">Опис</h5>
+          <p class="card-text" style="white-space: pre-wrap;">{{ ad.body|default:"Опис відсутній." }}</p>
+
+          <hr>
+          <div class="d-flex justify-content-between text-muted small">
+            <span>Переглядів: {{ ad.views|default:"0" }}</span>
+          </div>
+        </div>
+      </div>
+
+    </div> {# КІНЕЦЬ col-lg-8 #}
+
+    <div class="col-lg-4">
+
+      <div class="card shadow-sm mb-3">
+        <div class="card-body">
+          <h1 class="h3 ad-detail-title">{{ ad.title }}</h1>
+          <h2 class="h1 ad-detail-price">{{ ad.price }} грн</h2>
+        </div>
+      </div>
+
+        {% if request.user.is_authenticated and ad.user and ad.user != request.user %}
+          <a href="{% url 'order_ad' ad.id %}" class="btn btn-primary-dark w-100 btn-lg mb-3">
+            <i class="fa-solid fa-shield-halved me-2"></i> Купити
+          </a>
+        {% endif %}
+
+      <div class="card shadow-sm mb-3">
+        <div class="card-body">
+          <h5 class="card-title h6 mb-3">Способи доставки</h5>
+          <ul class="list-unstyled delivery-list">
+            <li><i class="fa-solid fa-truck-fast text-danger"></i> <span>від 19 грн. - Укрпошта</span></li>
+            <li><i class="fa-solid fa-box text-success"></i> <span>від 60 грн. - Нова Пошта</span></li>
+            <li><i class="fa-solid fa-handshake text-primary"></i> <span>Самовивіз</span></li>
+          </ul>
+        </div>
+      </div>
+        <div class="card shadow-sm mb-3 seller-card-dark" id="sellerCard">
+          <div class="card-body text-center">
+            <h5 class="card-title h6 mb-3">
+              <i class="fa-solid fa-user"></i> Профіль продавця
+            </h5>
+
+            <div class="seller-info">
+              <img src="{{ ad.user.profile.image.url|default:'/static/media/images/placeholder.png' }}"
+                   class="seller-avatar"
+                   alt="Фото продавця">
+
+              <p class="seller-name mt-2">{{ ad.user.username }}</p>
             </div>
+          </div>
+        </div>
 
-        </div> {# ЗАКРИТИЙ ТЕГ: <div class="col-lg-8"> #}
+                <!-- === СПЛИВАЮЧЕ ВІКНО ПРОФІЛЮ === -->
+        <div id="profilePopup" class="profile-popup-overlay" style="display: none;">
+          <div class="edit-profile-card fade-in">
+            <h2><i class="fa-solid fa-user" style="color: #3a1a30"></i> Профіль користувача</h2>
 
-        <div class="col-lg-4">
+            <div class="profile-view">
+              <div class="avatar-section">
+                <img src="{{ ad.user.profile.image.url|default:'/static/media/images/placeholder.png' }}"
+                     class="profile-avatar-preview"
+                     alt="Avatar">
+              </div>
 
-            <div class="card shadow-sm mb-3">
-                <div class="card-body">
-                    <h1 class="h3 ad-detail-title">{{ ad.title }}</h1>
-                    {# ВИПРАВЛЕНО: формат ціни #}
-                    <h2 class="h1 ad-detail-price">{{ ad.price }} грн</h2>
-                </div>
+              <div class="form-group">
+                <label>Ім’я користувача</label>
+                <p>{{ ad.user.username }}</p>
+              </div>
+
+              {% if ad.user.profile.description %}
+              <div class="form-group">
+                <label>Опис</label>
+                <p>{{ ad.user.profile.description }}</p>
+              </div>
+              {% endif %}
+
+              {% if ad.user.profile.phone %}
+              <div class="form-group">
+                <label>Телефон</label>
+                <p>{{ ad.user.profile.phone }}</p>
+              </div>
+              {% endif %}
+
+              {% if ad.user.profile.location %}
+              <div class="form-group">
+                <label>Місцезнаходження</label>
+                <p>{{ ad.user.profile.location }}</p>
+              </div>
+              {% endif %}
+
+              <div class="profile-buttons">
+                <button id="closeProfileBtn" class="btn btn-gradient">
+                  <i class="fa-solid fa-arrow-left"></i> Назад
+                </button>
+              </div>
             </div>
+          </div>
+        </div>
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  const profilePopup = document.getElementById("profilePopup");
+  const closeBtn = document.getElementById("closeProfileBtn");
+  const sellerCard = document.getElementById("sellerCard");
 
-            <a href="#" class="btn btn-primary-dark w-100 btn-lg mb-3">
-                <i class="fa-solid fa-shield-halved me-2"></i> Купити з доставкою
-            </a>
+  sellerCard.addEventListener("click", function () {
+    profilePopup.style.display = "flex";
+    document.body.style.overflow = "hidden";
+  });
 
-            <div class="card shadow-sm mb-3">
-                <div class="card-body">
-                    <h5 class="card-title h6 mb-3">Способи доставки</h5>
-                    <ul class="list-unstyled delivery-list">
-                        <li><i class="fa-solid fa-truck-fast text-danger"></i> <span>від 19 грн. - Укрпошта</span></li>
-                        <li><i class="fa-solid fa-box text-success"></i> <span>від 60 грн. - Нова Пошта</span></li>
-                        <li><i class="fa-solid fa-handshake text-primary"></i> <span>Самовивіз</span></li>
-                    </ul>
-                </div>
-            </div>
+  closeBtn.addEventListener("click", function () {
+    profilePopup.style.display = "none";
+    document.body.style.overflow = "auto";
+  });
 
-            <div class="card shadow-sm mb-3 seller-card">
-                <div class="card-body">
-                    <h5 class="card-title h6 mb-3">Користувач</h5>
-                    <div class="d-flex align-items-center">
-                        <div class="seller-avatar">
-                            <i class="fa-solid fa-user fa-2x"></i>
-                        </div>
-                        {% if user.is_authenticated and ad.user == user %}
-                            <a href="{% url 'ad_edit' slug=ad.slug %}" class="btn btn-outline-primary btn-sm"><i class="fa-solid fa-pen"></i> Редагувати</a>
-                        {% endif %}
-                        <div class="ms-3">
-                            {# ВИПРАВЛЕНО: ad.user.username #}
-                            <strong class="d-block">{{ ad.user.username }}</strong>
-                            {# ВИПРАВЛЕНО: ad.user.date_joined #}
-                            <span class="text-muted small">на OLX з {{ ad.user.date_joined|date:"M Y" }}</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
+  profilePopup.addEventListener("click", function (e) {
+    if (e.target === profilePopup) {
+      profilePopup.style.display = "none";
+      document.body.style.overflow = "auto";
+    }
+  });
+});
+</script>
 
-            <div class="card shadow-sm mb-3">
-                <div class="card-body">
-                    <h5 class="card-title h6 mb-3">Місцезнаходження</h5>
-                    <p class="card-text">
-                        <i class="fa-solid fa-location-dot me-1"></i>
-                        {# ВИПРАВЛЕНО: ad.place #}
-                        {{ ad.place|default:"Місце не вказано" }}
-                    </p>
-                    {# ВИПРАВЛЕНО ШЛЯХ: static 'images/map_placeholder.png' #}
-                    <img src="{% static 'images/placeholder.png' %}" class="img-fluid rounded" alt="Мапа">
-                </div>
-            </div>
-
-        </div> {# ЗАКРИТИЙ ТЕГ: <div class="col-lg-4"> #}
-    </div> {# ЗАКРИТИЙ ТЕГ: <div class="row"> #}
-</div> {# ЗАКРИТИЙ ТЕГ: <div class="container-fluid"> #}
 {% endblock %}

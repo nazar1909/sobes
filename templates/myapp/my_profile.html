@@ -16,13 +16,9 @@
         <!-- Інформація -->
         <div class="form-group">
             <label>Ім’я користувача</label>
-            <p>{{ profile_data.full_name|default:user.username }}</p>
+            <p>{{ user.username }}</p>
         </div>
 
-        <div class="form-group">
-            <label>Опис</label>
-            <p>{{ user.profile.bio|default:'Не вказано' }}</p>
-        </div>
 
         <div class="form-group">
             <label>Телефон</label>
@@ -30,8 +26,8 @@
         </div>
 
         <div class="form-group">
-            <label>Місцезнаходження</label>
-            <p>{{ user.profile.location|default:'Не вказано' }}</p>
+            <label>Пошта</label>
+            <p>{{ user.email}}</p>
         </div>
 
         <!-- Кнопки -->
