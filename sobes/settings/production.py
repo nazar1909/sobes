@@ -4,20 +4,23 @@ import re
 print("🚀 Running in PRODUCTION mode")
 
 DEBUG = False
-ALLOWED_HOSTS = ["yourdomain.com", "www.yourdomain.com"]
+ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "sobes-app-production-d2a1.up.railway.app").split(",")
 
 # ======== Database ========
 print("✅ Connecting to PRODUCTION PostgreSQL database...")
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
-        "NAME": os.getenv("POSTGRES_DB"),
-        "USER": os.getenv("POSTGRES_USER"),
-        "PASSWORD": os.getenv("POSTGRES_PASSWORD"),
-        "HOST": os.getenv("POSTGRES_HOST", "sobes-db"),
+        "NAME": os.getenv("POSTGRES_DB","railway"),
+        "USER": os.getenv("POSTGRES_USER","postgres"),
+        "PASSWORD": os.getenv("POSTGRES_PASSWORD","RDfXJdxuOtFWACcJbBGrfDVVgvDgOIvN"),
+        "HOST": os.getenv("POSTGRES_HOST", "postgres.railway.internal"),
         "PORT": os.getenv("POSTGRES_PORT", "5432"),
     }
 }
+
+
+
 
 # ======== Redis Cache ========
 redis_url = os.getenv("REDIS_URL")
