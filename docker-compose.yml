@@ -88,17 +88,19 @@ services:
     env_file:
       - .env.local
     command: >
-      sh -c "python manage.py wait_for_db &&
-             celery -A sobes worker -l info"
+      sh -c "python manage.py migrate && 
+                 python manage.py collectstatic --noinput &&
+                 gunicorn sobes.wsgi:application --bind 0.0.0.0:8000 --workers 4"
+
     volumes:
       - .:/app
     environment:
       - POSTGRES_DB=TEST
       - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=12345678
-      - POSTGRES_HOST=db
+      - POSTGRES_PASSWORD=RDfXJdxuOtFWACcJbBGrfDVVgvDgOIvN
+      - POSTGRES_HOST=sobes-db.railway.internal
       - DJANGO_SETTINGS_MODULE=sobes.settings
-      - DATABASE_URL=postgresql://postgres:12345678@db:5432/TEST
+      - DATABASE_URL=postgresql://postgres:RDfXJdxuOtFWACcJbBGrfDVVgvDgOIvN@postgres.railway.internal:5432/railway
       - REDIS_HOST=redis
       - RABBITMQ_HOST=rabbitmq
       - RABBITMQ_DEFAULT_USER=guest
