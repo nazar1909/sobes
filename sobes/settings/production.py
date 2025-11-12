@@ -3,7 +3,7 @@ import re
 
 print("🚀 Running in PRODUCTION mode")
 
-DEBUG = False
+DEBUG = True
 ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "sobes-app-production-d2a1.up.railway.app").split(",")
 
 # ======== Database ========
