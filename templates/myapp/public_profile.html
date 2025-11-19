@@ -1,35 +1,85 @@
-{% extends "main/layout.html" %}
+{% extends 'main/layout.html' %}
+{% load static %}
 {% block content %}
-<div class="container mt-4">
-    <div class="card mb-4">
-        <div class="card-body">
-            <h3>{{ profile_user.username }}</h3>
-            {% if profile and profile.image %}
-                <img src="{{ profile.image.url }}" alt="Фото профілю" class="rounded-circle" width="100">
-            {% endif %}
-            <p>Email: {{ profile_user.email }}</p>
+
+<div class="edit-profile-card public-profile-page">
+
+    <h2>
+        <i class="fa-solid fa-user" style="color: #3a1a30"></i>
+        Профіль: {{ profile_user.username }}
+    </h2>
+
+    <div class="profile-view">
+        <div class="avatar-section">
+            <img src="{% if profile.image %}{{ profile.image.url }}{% else %}{% static 'images/placeholder.png' %}{% endif %}"
+                 class="profile-avatar-preview"
+                 alt="Avatar">
+        </div>
+
+        <div class="form-group">
+            <label>Ім’я користувача</label>
+            <p>{{ profile_user.username }}</p>
+        </div>
+
+        <div class="form-group">
+            <label>Телефон</label>
+            <p>{{ user.profile.phone|default:'Не вказано' }}</p>
+        </div>
+
+        <div class="form-group">
+            <label>Email</label>
+            <p>{{ profile_user.email }}</p>
+        </div>
+
+
+
+        <div class="profile-buttons">
+            <a href="javascript:history.back()" class="btn btn-gradient">
+                <i class="fa-solid fa-arrow-left"></i> Назад
+            </a>
         </div>
     </div>
+</div>
 
-    <h4>Оголошення користувача:</h4>
-    <div class="row">
+<div class="container" >
+    <h2 class="mb-4">Інші оголошення користувача:</h2>
+    <div class="row g-3">
         {% for ad in ads %}
-            <div class="col-md-4 mb-3">
-                <div class="card h-100">
-                    {% if ad.image %}
-                        <img src="{{ ad.image.url }}" class="card-img-top" alt="">
-                    {% endif %}
-                    <div class="card-body">
-                        <h5 class="card-title">
-                            <a href="{% url 'ad_detail' ad.slug %}">{{ ad.title }}</a>
-                        </h5>
-                        <p>{{ ad.price }} ₴</p>
+        <div class="col-12">
+            <div class="card ad-listing-card mb-3 shadow-sm">
+                <div class="row g-0">
+                    <div class="col-md-4">
+                        <a href="{{ ad.get_absolute_url }}">
+                            <img src="{% if ad.images.first %}{{ ad.images.first.image.url }}{% else %}{% static 'images/placeholder.png' %}{% endif %}"
+                             class="ad-listing-img"
+                             alt="{{ ad.title }}">
+                        </a>
+                    </div>
+                    <div class="col-md-8">
+                        <div class="card-body d-flex flex-column h-100">
+                            <h5 class="card-title">
+                                <a href="{{ ad.get_absolute_url }}" class="text-decoration-none">{{ ad.title }}</a>
+                            </h5>
+                            <p class="ad-price mb-2">{{ ad.price }} ₴</p>
+                            <div class="ad-meta mt-auto">
+                                <span>
+                                    <i class="fa-solid fa-location-dot"></i> {{ ad.place }}
+                                </span>
+                                <span>
+                                    <i class="fa-solid fa-clock"></i> {{ ad.date|date:"d.m.Y" }}
+                                </span>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
+        </div>
         {% empty %}
-            <p>У цього користувача ще немає оголошень.</p>
+        <div class="col-12">
+            <p class="text-muted fs-5">У цього користувача ще немає активних оголошень.</p>
+        </div>
         {% endfor %}
     </div>
 </div>
+
 {% endblock %}

@@ -7,61 +7,322 @@
 <div class="container-fluid">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h1 class="h2">Усі оголошення</h1>
-        <a href="{% url 'ad_create' %}" class="btn btn-primary-dark">
-            + Додати оголошення
-        </a>
+        <a href="{% url 'ad_create' %}" class="btn btn-primary-dark">+ Додати оголошення</a>
     </div>
 
     <div class="profile-ads-container">
-        {% if ads %}
-            {% for ad in ads %}
-                <div class="card shadow-sm mb-4 ad-management-card position-relative">
+        {% if page_obj.object_list %}
+            {% for ad in page_obj.object_list %}
+               <div class="card shadow-sm mb-4 ad-management-card position-relative" data-ad-id="{{ ad.id }}">
                     <div class="row g-0">
-                        <div class="col-md-3">
+                         <div class="col-md-3 position-relative">
                             {% if ad.images.all %}
                                 <img src="{{ ad.images.first.image.url }}" class="ad-management-img" alt="{{ ad.title }}">
                             {% else %}
                                 <img src="{% static 'media/images/placeholder.png' %}" class="ad-management-img" alt="Немає фото">
                             {% endif %}
                         </div>
-
-                        <div class="col-md-9">
+                         <div class="col-md-9">
                             <div class="card-body">
                                 <div class="d-flex justify-content-between align-items-start mb-2">
                                     <h5 class="card-title mb-0">
-                                        <a href="{% url 'ad_detail' slug=ad.slug %}" class="stretched-link text-decoration-none text-dark">
+                                        <a href="{% url 'ad_detail' slug=ad.slug %}" class="stretched-link text-decoration-none text-dark ad-detail-link">
                                             {{ ad.title }}
                                         </a>
                                     </h5>
                                     <h4 class="text-dark fw-bold mb-0 ms-3">{{ ad.price|floatformat:0 }} грн</h4>
                                 </div>
-
                                 <p class="card-text text-muted small mb-3">
                                     <i class="fa-solid fa-location-dot me-1"></i>
                                     {{ ad.place|default:"Місце не вказано" }}
                                     <i class="fa-solid fa-calendar-day ms-3 me-1"></i>
                                     Опубліковано: {{ ad.date|date:"d M Y" }}
                                 </p>
-
                                 <div class="d-flex flex-wrap align-items-center text-muted small mb-3 ad-stats">
-                                    <span class="me-3"><i class="fa-solid fa-eye me-1"></i> {{ ad.views|default:"0" }}</span>
-                                    <span class="me-3"><i class="fa-solid fa-heart me-1"></i> {{ ad.favorites_count|default:"0" }}</span>
-                                    <a href="#" class="btn btn-link btn-sm p-0 fw-bold position-relative"><i class="fa-solid fa-message me-1"></i> {{ ad.message_count|default:"0" }}</a>
+                                    <span class="me-3 view-count"><i class="fa-solid fa-eye me-1"></i> {{ ad.views|default:"0" }}</span>
+                                    <span class="me-3 favorite-count"><i class="fa-solid fa-heart me-1"></i> {{ ad.favorites_count|default:"0" }}</span>
+                                    <div class="me-3 text-muted"><i class="fa-solid fa-comments me-1"></i> {{ ad.conversations_count|default:"0" }}</div>
                                 </div>
                             </div>
                         </div>
                     </div>
+
+                    {% if request.user.is_authenticated and ad.user != request.user %}
+                        <a href="{% url 'toggle_favorite' ad.slug %}" class="favorite-icon">
+                            {% if ad.is_favorited %}
+                                <i class="fa-solid fa-heart" style="color: var(--brand-danger);"></i>
+                            {% else %}
+                                <i class="fa-regular fa-heart"></i>
+                            {% endif %}
+                        </a>
+                    {% endif %}
                 </div>
             {% endfor %}
+
+            <nav aria-label="Pagination">
+                <ul class="pagination-container">
+
+                    {% if page_obj.has_previous %}
+                    <li class="pagination-item">
+                        <a class="pagination-link" href="?page={{ page_obj.previous_page_number }}">Попередня</a>
+                    </li>
+                    {% else %}
+                        <li class="pagination-item disabled">
+                            <span class="pagination-link">Попередня</span>
+                        </li>
+                    {% endif %}
+
+                    <li class="pagination-item active" aria-current="page">
+                        <span class="pagination-link">
+                            Сторінка {{ page_obj.number }} з {{ page_obj.paginator.num_pages }}
+                        </span>
+                    </li>
+
+                    {% if page_obj.has_next %}
+                        <li class="pagination-item">
+                            <a class="pagination-link" href="?page={{ page_obj.next_page_number }}">Наступна</a>
+                        </li>
+                    {% else %}
+                        <li class="pagination-item disabled">
+                            <span class="pagination-link">Наступна</span>
+                        </li>
+                    {% endif %}
+
+                </ul>
+            </nav>
+
         {% else %}
             <div class="text-center p-5 bg-light rounded">
                 <h3>Немає оголошень</h3>
-                <p class="lead text-muted">Поки що тут порожньо</p>
-                <a href="{% url 'ad_create' %}" class="btn btn-primary-dark btn-lg mt-3">
-                    Створити оголошення
-                </a>
             </div>
         {% endif %}
     </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+{{ block.super }}
+
+<style>
+.favorite-icon {
+  position: absolute !important;
+  bottom: 10px !important;
+  right: 10px !important;
+  z-index: 10 !important;
+  font-size: 1.25rem;
+  background: rgba(255, 255, 255, 0.7);
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  transition: transform 0.1s ease;
+}
+.favorite-icon:hover {
+  background: rgba(255, 255, 255, 1);
+  transform: scale(1.1);
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+
+    // === ФУНКЦІЯ: Оновлення вигляду картки ===
+    function updateLikeUI(card, isLiked, count) {
+        const icon = card.querySelector('.favorite-icon i');
+        const countSpan = card.querySelector('.favorite-count');
+
+        // 1. Іконка
+        if (isLiked) {
+            icon.classList.remove('fa-regular');
+            icon.classList.add('fa-solid');
+            icon.style.color = 'var(--brand-danger)';
+        } else {
+            icon.classList.remove('fa-solid');
+            icon.classList.add('fa-regular');
+            icon.style.color = '';
+        }
+
+        // 2. Цифра на картці
+        if (countSpan && count !== null && count !== undefined) {
+            countSpan.innerHTML = `<i class="fa-solid fa-heart me-1"></i> ${count}`;
+        }
+    }
+
+    // === ФУНКЦІЯ: Оновлення бейджа в меню (Сайдбар) ===
+        function updateNavbarBadge(count) {
+        const sidebarBadge = document.getElementById('favorite-count');
+        if (sidebarBadge) {
+            sidebarBadge.textContent = count;
+            if (count > 0) {
+                sidebarBadge.classList.remove('d-none');
+            } else {
+                sidebarBadge.classList.add('d-none');
+            }
+        }
+    }
+
+    // 2. ОБРОБКА КЛІКУ (ГОЛОВНА ЛОГІКА)
+    document.querySelectorAll('.favorite-icon').forEach(button => {
+        button.addEventListener('click', async (event) => {
+            // ... (попередня логіка) ...
+
+            // --- А. МИТТЄВА МАТЕМАТИКА ДЛЯ КАРТКИ ---
+            // ... (Your existing card logic) ...
+
+            // --- Б. МИТТЄВА МАТЕМАТИКА ДЛЯ САЙДБАРУ (NAVBAR) ---
+            // 💡 ВАШЕ ВИПРАВЛЕННЯ:
+            if (sidebarBadge) {
+                let currentGlobalCount = 0;
+                // Якщо бейдж видимий, беремо його цифру. Якщо ні - вважаємо 0.
+                if (!sidebarBadge.classList.contains('d-none')) {
+                    currentGlobalCount = parseInt(sidebarBadge.textContent) || 0;
+                }
+
+                let newGlobalCount = isNowLiked ? currentGlobalCount + 1 : Math.max(0, currentGlobalCount - 1);
+                updateNavbarBadge(newGlobalCount);
+            }
+
+            // --- В. ЗАПИТ НА СЕРВЕР ---
+            try {
+                const response = await fetch(button.href, {
+                    method: 'GET',
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                });
+                const data = await response.json();
+
+                if (data.success) {
+                    // ... (синхронізація картки) ...
+
+                    // 💡 ФІНАЛЬНА СИНХРОНІЗАЦІЯ З СЕРВЕРОМ:
+                    if (data.user_favorites_count !== undefined) {
+                        updateNavbarBadge(data.user_favorites_count);
+                    }
+                }
+            } catch (error) {
+                // ... (обробка помилок) ...
+            }
+        });
+    });
+
+    // 1. ВІДНОВЛЕННЯ СТАНУ ПРИ ЗАВАНТАЖЕННІ (з SessionStorage)
+    function restoreState() {
+        document.querySelectorAll('.card').forEach(card => {
+            const adId = card.getAttribute('data-ad-id');
+            if (!adId) return;
+
+            const savedLikeState = sessionStorage.getItem(`ad_liked_${adId}`);
+            if (savedLikeState !== null) {
+                const isLiked = (savedLikeState === 'true');
+
+                // Візуальна корекція "самолікування"
+                const countSpan = card.querySelector('.favorite-count');
+                let currentCount = parseInt(countSpan.textContent.replace(/\D/g, '')) || 0;
+
+                if (isLiked && currentCount === 0) {
+                    updateLikeUI(card, true, 1);
+                } else {
+                    updateLikeUI(card, isLiked, currentCount);
+                }
+            }
+        });
+    }
+    restoreState();
+
+    // 2. ОБРОБКА КЛІКУ (ГОЛОВНА ЛОГІКА)
+    document.querySelectorAll('.favorite-icon').forEach(button => {
+        button.addEventListener('click', async (event) => {
+            event.preventDefault();
+            const card = button.closest('.card');
+            const adId = card.getAttribute('data-ad-id');
+            const countSpan = card.querySelector('.favorite-count');
+            const sidebarBadge = document.getElementById('favorite-count'); // Знаходимо бейдж
+
+            const icon = button.querySelector('i');
+            const wasLiked = icon.classList.contains('fa-solid'); // Чи було лайкнуто ДО кліку?
+            const isNowLiked = !wasLiked; // Стало лайкнуто?
+
+            // --- А. МИТТЄВА МАТЕМАТИКА ДЛЯ КАРТКИ ---
+            let currentCardCount = countSpan ? (parseInt(countSpan.textContent.replace(/\D/g, '')) || 0) : 0;
+            let newCardCount = isNowLiked ? currentCardCount + 1 : Math.max(0, currentCardCount - 1);
+
+            // Оновлюємо картку миттєво
+            updateLikeUI(card, isNowLiked, newCardCount);
+            if (adId) sessionStorage.setItem(`ad_liked_${adId}`, isNowLiked);
+
+            // --- Б. МИТТЄВА МАТЕМАТИКА ДЛЯ САЙДБАРУ (NAVBAR) ---
+            // Ось це прибирає затримку!
+            if (sidebarBadge) {
+                let currentGlobalCount = 0;
+                // Якщо бейдж видимий, беремо його цифру. Якщо ні - вважаємо 0.
+                if (!sidebarBadge.classList.contains('d-none')) {
+                    currentGlobalCount = parseInt(sidebarBadge.textContent) || 0;
+                }
+
+                let newGlobalCount = isNowLiked ? currentGlobalCount + 1 : Math.max(0, currentGlobalCount - 1);
+                updateNavbarBadge(newGlobalCount);
+            }
+
+            // --- В. ЗАПИТ НА СЕРВЕР ---
+            try {
+                const response = await fetch(button.href, {
+                    method: 'GET',
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                });
+                const data = await response.json();
+
+                if (data.success) {
+                    // Синхронізуємо точні дані з сервера (Source of Truth)
+                    // Це виправить цифру, якщо наша "миттєва математика" помилилась
+                    if (countSpan) {
+                        updateLikeUI(card, isNowLiked, data.favorite_count);
+                    }
+
+                    if (data.user_favorites_count !== undefined) {
+                        updateNavbarBadge(data.user_favorites_count);
+                    }
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                // Упс, помилка! Відкочуємо зміни назад
+                updateLikeUI(card, wasLiked, currentCardCount);
+                // Для сайдбару відкат складніший, тому просто перезавантажуємо сторінку або ігноруємо
+            }
+        });
+    });
+
+    // 3. ПЕРЕГЛЯДИ (VIEW COUNT)
+    document.querySelectorAll('.ad-detail-link').forEach(link => {
+        link.addEventListener('click', function() {
+            const card = this.closest('.card');
+            const adId = card.getAttribute('data-ad-id');
+            if (adId) {
+                localStorage.setItem('last_viewed_ad', adId);
+                localStorage.setItem('last_viewed_time', Date.now());
+            }
+        });
+    });
+});
+
+// 4. ПОВЕРНЕННЯ НА СТОРІНКУ (Back Button)
+window.addEventListener('pageshow', function(event) {
+    const viewedAdId = localStorage.getItem('last_viewed_ad');
+    const viewedTime = localStorage.getItem('last_viewed_time');
+
+    if (viewedAdId && viewedTime && (Date.now() - viewedTime < 600000)) {
+        const card = document.querySelector(`.card[data-ad-id="${viewedAdId}"]`);
+        if (card) {
+            const viewCountSpan = card.querySelector('.view-count');
+            if (viewCountSpan) {
+                let text = viewCountSpan.textContent.replace(/\D/g, '');
+                let currentViews = parseInt(text) || 0;
+                viewCountSpan.innerHTML = `<i class="fa-solid fa-eye me-1"></i> ${currentViews + 1}`;
+            }
+        }
+        localStorage.removeItem('last_viewed_ad');
+    }
+});
+</script>
 {% endblock %}

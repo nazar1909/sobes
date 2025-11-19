@@ -4,14 +4,12 @@ services:
   db:
     image: postgres:14-alpine
     restart: always
+    env_file:
+      - .env.railway
     volumes:
       - postgres_data:/var/lib/postgresql/data/
-    environment:
-      POSTGRES_DB: sobes
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -24,18 +22,22 @@ services:
     image: rabbitmq:3-management-alpine
     restart: always
     environment:
-      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER}
-      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASS}
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS}
+    ports:
+      - "5672:5672"
+      - "15672:15672"
 
   web:
     build: .
     restart: always
     env_file:
-      - .env.production
+      - .env.railway
     command: >
-      sh -c "python manage.py migrate &&
-             python manage.py collectstatic --noinput &&
-             gunicorn sobes.wsgi:application --bind 0.0.0.0:8000 --workers 3 --threads 2 --timeout 120"
+      sh -c "python wait_for_db_app &&
+               python manage.py migrate &&
+               python manage.py collectstatic --noinput &&
+               gunicorn sobes.wsgi:application --bind 0.0.0.0:8000 --workers 3 --threads 2 --timeout 120"
     ports:
       - "8000:8000"
     depends_on:
@@ -51,10 +53,13 @@ services:
 
   celery:
     build: .
+    working_dir: /app
     restart: always
     env_file:
-      - .env.production
-    command: celery -A sobes worker -l info
+      - .env.railway
+    command: >
+      sh -c "python manage.py wait_for_db &&
+               celery -A sobes worker -l info"
     depends_on:
       db:
         condition: service_healthy

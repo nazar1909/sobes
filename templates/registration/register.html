@@ -7,7 +7,7 @@
     <div class="form-card p-4 shadow-sm rounded-3 bg-white form-wrapper" style="width: 400px;">
 
         <div class="form-header">
-            <img src="{% static 'media/images/olx.svg' %}" alt="OLX" class="form-logo">
+            <img src="{% static 'images/olx.svg' %}" alt="OLX" class="form-logo">
             <h2>Реєстрація</h2>
         </div>
 
@@ -129,9 +129,27 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // ---- PASSWORD1 ----
     if (name === 'password1') {
-      if (!value) return clearField(input, feedback, icon);
-      if (value.length >= 8) return setValid(input, feedback, icon);
-      return setInvalid(input, feedback, icon, "Пароль має містити щонайменше 8 символів");
+      if (!value) return clearField(input, feedback, icon); // Очищуємо, якщо поле порожнє
+
+      // --- Нова логіка валідації ---
+      const hasUpper = /[A-Z]/;
+      const hasSpecial = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/;
+
+      if (value.length < 8) {
+        return setInvalid(input, feedback, icon, "Пароль має містити щонайменше 8 символів");
+      }
+
+      if (!hasUpper.test(value)) {
+        return setInvalid(input, feedback, icon, "Пароль має містити щонайменше одну велику літеру (A-Z)");
+      }
+
+      if (!hasSpecial.test(value)) {
+        return setInvalid(input, feedback, icon, "Пароль має містити щонайменше один спецсимвол (!@#$)");
+      }
+      // --- Кінець нової логіки ---
+
+      // Якщо всі перевірки пройшли
+      return setValid(input, feedback, icon);
     }
 
     // ---- PASSWORD2 ----

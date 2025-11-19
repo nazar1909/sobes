@@ -5,121 +5,205 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{% block title %}OLX{% endblock %}</title>
   {% load static %}
-
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"><link href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css" rel="stylesheet">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
+  <link rel="icon" href="{% static 'images/favicon.ico' %}" type="image/x-icon">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" referrerpolicy="no-referrer" />
-
   <link rel="stylesheet" href="{% static 'media_dev/css/main.css' %}">
+
+  <style>
+    /* Додаткове страхування стилів, якщо main.css не підтягнувся */
+    .favorite-count-badge {
+        position: absolute;
+        top: 8px;
+        right: 15px;
+        background-color: #dc3545;
+        color: white;
+        font-size: 0.7rem;
+        font-weight: 700;
+        padding: 2px 6px;
+        border-radius: 50%;
+        min-width: 18px;
+        text-align: center;
+        line-height: 1;
+        z-index: 100;
+    }
+    .favorite-count-badge.d-none {
+        display: none !important;
+    }
+  </style>
 </head>
 
 <body class="d-flex">
 
-
-<nav class="sidebar d-flex flex-column flex-shrink-0 p-3 ">
-
-    <a class="navbar-brand mb-3" href="{% url 'home'%}">
-        <img src="{% static 'media/images/olx.svg' %}" alt="OLX logo" width="80">
-    </a>
-
-    <hr>
-
-    <ul class="nav nav-pills flex-column mb-auto">
-        <li class="nav-item">
-            <a href="#" class="nav-link text-white">
-                <i class="fa-solid fa-comments me-2"></i> Чат
-            </a>
-        </li>
-        <li class="nav-item">
-            <a href="{% url 'listing_detail' %}" class="nav-link text-white">
-                <i class="fa-solid fa-list me-2"></i> Всі оголошеня
-            </a>
-        </li>
-        <li class="nav-item position-relative">
-            <a href="{% url 'favorite_ads' %}" id="favorite-link" class="nav-link position-relative">
-              <i class="fa-solid fa-heart text-light"></i>
-              <span class="text-light">Обране</span>
-
-              {% if request.user.is_authenticated %}
-                {% with fav_count=request.user.favorite_ads.count %}
-                  <span id="favorite-count"
-                        class="favorite-count-badge {% if fav_count == 0 %}d-none{% endif %}">
-                    {{ fav_count }}
-                  </span>
-                {% endwith %}
-              {% endif %}
-            </a>
-        </li>
-        <li class="nav-item">
-            <a href="#" class="nav-link text-white">
-                <i class="fa-solid fa-bell me-2"></i> Сповіщення
-            </a>
-        </li>
-    </ul>
-
-    <hr>
-
-<a href="{% url 'ad_create' %}" class="btn btn-light w-100 mb-3">
-    <i class="fa-solid fa-plus me-1"></i> Додати оголошення
-</a>
-
-<div>
-    {% if user.is_authenticated %}
-        <div class="profile-dropdown">
-            <div class="profile-trigger">
-                {% if user.profile.image %}
-                    <img src="{{ user.profile.image.url }}" alt="Avatar" class="profile-avatar">
-                {% else %}
-                     <img src="https://res.cloudinary.com/dhact88gj/image/upload/v1762434177/xoe34jkbrrv8lr7mfpk8.png" alt="Default Avatar" class="avatar">
-                {% endif %}
-                <span class="profile-name">{{ user.username }}</span>
-            </div>
-
-            <div class="profile-menu-horizontal">
-                <a href="{% url 'profile' %}"><i class="fa-regular fa-file-lines me-1"></i> Мої оголошення</a>
-                <a href="{% url 'my_profile' %}"><i class="fa-solid fa-user-gear me-1"></i> Мій профіль</a>
-                <form action="{% url 'logout' %}" method="post" style="display:inline;">
-                    {% csrf_token %}
-                    <button type="submit" class="profile-link-btn">
-                        <i class="fa-solid fa-right-from-bracket me-1"></i> Вийти
-                    </button>
-                </form>
-            </div>
-        </div>
-    {% else %}
-        <a class="btn btn-outline-success w-100 mb-2" href="{% url 'login' %}">
-            <i class="fa-solid fa-sign-in-alt me-2"></i> Увійти
+<nav class="sidebar d-flex flex-column flex-shrink-0">
+    <div class="sidebar-content-wrapper p-3">
+        <a class="navbar-brand mb-0" href="{% url 'home'%}">
+            <img src="{% static 'images/olx.svg' %}" alt="OLX logo">
         </a>
-        <a class="btn btn-outline-light w-100 btn-sm" href="{% url 'register' %}">
-            Зареєструватись
+        <hr>
+        <ul class="nav nav-pills flex-column mb-auto">
+
+            <li class="nav-item position-relative">
+                <a href="{% url 'chat_list' %}"
+                   id="nav-chat-link"
+                   class="nav-link text-white position-relative {% if unread_notifications_count > 0 %}has-unread-messages{% endif %}">
+
+                    <i class="fa-solid fa-comments me-2"></i> Чат
+
+                    <span id="chat-badge"
+                          class="favorite-count-badge {% if unread_notifications_count == 0 %}d-none{% endif %}">
+                        {{ unread_notifications_count }}
+                    </span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="{% url 'listing_detail' %}" class="nav-link text-white">
+                    <i class="fa-solid fa-list me-2"></i> Всі оголошеня
+                </a>
+            </li>
+
+            <li class="nav-item position-relative">
+                <a href="{% url 'favorite_ads' %}" id="nav-favorites-link" class="nav-link position-relative">
+                  <i class="fa-solid fa-heart text-light"></i>
+                  <span class="text-light">Обране</span>
+
+                  {% if request.user.is_authenticated %}
+                    {% with fav_count=request.user.favorite_ads.count %}
+                      <span id="favorite-count"
+                            class="favorite-count-badge {% if fav_count == 0 %}d-none{% endif %}">
+                        {{ fav_count }}
+                      </span>
+                    {% endwith %}
+                  {% endif %}
+                </a>
+            </li>
+
+        </ul>
+        <hr>
+        <a href="{% url 'ad_create' %}" class="btn btn-light w-100 mb-3">
+            <i class="fa-solid fa-plus me-1"></i> Додати оголошення
         </a>
-    {% endif %}
-</div>
+    </div>
 
+    <div>
+        {% if user.is_authenticated %}
+            <div class="profile-dropdown">
+                 <div class="profile-trigger">
+                    {% if user.profile.image %}
+                        <img src="{{ user.profile.image.url }}" alt="Avatar" class="profile-avatar">
+                    {% else %}
+                         <img src="https://res.cloudinary.com/dhact88gj/image/upload/v1762434177/xoe34jkbrrv8lr7mfpk8.png" alt="Default Avatar" class="profile-avatar">
+                    {% endif %}
+                    <span class="profile-name">{{ user.username }}</span>
+                </div>
 
+                <div class="profile-menu-horizontal">
+                    <a href="{% url 'profile' %}"><i class="fa-regular fa-file-lines"></i> <span>Оголошення</span></a>
+                    <a href="{% url 'my_profile' %}"><i class="fa-solid fa-user-gear"></i> <span>Профіль</span></a>
+
+                    <form action="{% url 'logout' %}" method="post" style="display:flex;">
+                        {% csrf_token %}
+                        <button type="submit" class="profile-link-btn">
+                            <i class="fa-solid fa-right-from-bracket"></i> <span>Вийти</span>
+                        </button>
+                    </form>
+                </div>
+            </div>
+        {% else %}
+             <a class="btn btn-outline-success w-100 mb-2" href="{% url 'login' %}">
+                <i class="fa-solid fa-sign-in-alt me-2"></i> Увійти
+            </a>
+            <a class="btn btn-outline-light w-100 btn-sm" href="{% url 'register' %}">
+                Зареєструватись
+            </a>
+        {% endif %}
+    </div>
 </nav>
 
 <div class="main-content">
-
-
-
-
-
-
-
-
-
   {% block content %}
   {% endblock %}
 </div>
 
-
-
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
-
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-
+<script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
 <script src="https://unpkg.com/htmx.org@1.9.12"></script>
-{% block scripts %}{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+
+    // 1. Логіка сповіщень (WebSockets)
+    {% if request.user.is_authenticated %}
+        const currentUserId = {{ request.user.id }};
+
+        function showNotificationToast(message) {
+            const toast = document.createElement('div');
+            toast.className = 'notification-toast';
+            toast.innerHTML = `
+                <div class="d-flex align-items-center">
+                    <i class="fa-solid fa-comments me-2"></i>
+                    <span class="toast-message">${message}</span>
+                </div>
+            `;
+            toast.onclick = function() { window.location.href = "{% url 'chat_list' %}"; };
+            toast.style.cursor = 'pointer';
+            document.body.appendChild(toast);
+            setTimeout(() => toast.classList.add('show'), 10);
+            setTimeout(() => {
+                toast.classList.remove('show');
+                setTimeout(() => toast.remove(), 500);
+            }, 6000);
+        }
+
+        const wsProtocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
+        const notificationSocket = new WebSocket(
+            wsProtocol + window.location.host + '/ws/notifications/' + currentUserId + '/'
+        );
+
+        notificationSocket.onopen = function(e) {
+            console.log('✅ Chat Notifications Connected');
+        };
+
+        notificationSocket.onmessage = function(e) {
+            const data = JSON.parse(e.data);
+
+            if (data.type === 'chat_notification') {
+                // 1. Показуємо спливаючий тост
+                showNotificationToast(data.message);
+
+                // 2. Оновлюємо бейдж (червона цифра)
+                const badge = document.getElementById('chat-badge');
+                if (badge) {
+                    let count = parseInt(badge.textContent.trim()) || 0;
+                    count++;
+                    badge.textContent = count;
+                    badge.classList.remove('d-none');
+                    badge.classList.add('notification-glow');
+                }
+
+                // 3. 🔥 ДОДАЄМО СВІТІННЯ ДО САМОГО ПОСИЛАННЯ (ТЕКСТУ) 🔥
+                const chatLink = document.getElementById('nav-chat-link');
+                if (chatLink) {
+                    chatLink.classList.add('has-unread-messages');
+                }
+
+                // 4. Оновлення списку чатів
+                if (typeof window.updateChatList === 'function') {
+                    window.updateChatList(data);
+                }
+            }
+        };
+
+        notificationSocket.onclose = function(e) {
+            console.log('❌ Chat Socket Closed');
+        };
+
+    {% endif %}
+});
+</script>
+{% endblock %}
 </body>
 </html>

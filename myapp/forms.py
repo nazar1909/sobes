@@ -27,6 +27,34 @@ class RegistrationForm(UserCreationForm):
             'password2': forms.PasswordInput(attrs={'autocomplete': 'new-password'}),
         }
 
+    def clean_password1(self):
+        """
+        Додає кастомну валідацію для поля password1.
+        """
+        # Спочатку отримуємо пароль з cleaned_data
+        password = self.cleaned_data.get('password1')
+
+        # Ми перевіряємо, чи пароль взагалі існує (на випадок інших помилок)
+        if password:
+
+            # 1. Перевірка на велику літеру
+            if not re.search(r'[A-Z]', password):
+                raise ValidationError(
+                    "Пароль повинен містити принаймні одну велику літеру (A-Z).",
+                    code='password_no_upper'
+                )
+
+            # 2. Перевірка на спецсимвол
+            special_characters = r'[!@#$%^&*()_+\-=\[\]{};\':"\\|,.<>\/?]'
+            if not re.search(special_characters, password):
+                raise ValidationError(
+                    "Пароль повинен містити принаймні один спецсимвол (наприклад, @, #, $).",
+                    code='password_no_special'
+                )
+
+        # Обов'язково повертаємо пароль для подальшої обробки
+        # (наприклад, для перевірки на збіг з password2)
+        return password
 
 MAX_IMAGE_SIZE = 5 * 1024 * 1024  # 5 MB
 ALLOWED_MIME_PREFIX = 'image/'
@@ -113,6 +141,7 @@ AdImageFormSet = inlineformset_factory(
     fields=['image'],
     extra=7,
     max_num=7,
+    min_num=1,
     can_delete=True,
     # 🟢 FIX 3: Видаляємо надлишкову валідацію, щоб уникнути конфліктів.
     # validate_max=True залишаємо для обмеження max_num
@@ -176,7 +205,7 @@ class ProfileForm(forms.ModelForm):
 
     class Meta:
         model = Profile
-        fields = ['phone']  # тільки поля профілю
+        fields = ['image','phone']  # тільки поля профілю
         labels = {'phone': 'Телефон'}
         widgets = {
             'phone': forms.TextInput(attrs={

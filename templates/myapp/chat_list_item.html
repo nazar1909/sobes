@@ -1,0 +1,39 @@
+{% load static %}
+
+{# Початок блоку одного чату #}
+<a href="{% url 'chat_detail' chat.id %}" class="chat-item {% if chat.has_unread_messages %}chat-item-unread{% endif %}">
+
+    <div class="chat-item-avatar">
+        {# Перевірка: чи є користувач, чи є профіль і чи є завантажене фото #}
+        {% if chat.other_user.profile.image %}
+            <img src="{{ chat.other_user.profile.image.url }}" alt="{{ chat.other_user.username }}">
+        {% else %}
+            {# Якщо фото немає - показуємо статичну заглушку #}
+            <img src="{% static 'media/images/placeholder.png' %}" alt="No Avatar">
+        {% endif %}
+    </div>
+
+    <div class="chat-item-details">
+        <div class="chat-item-header">
+            {# Ім'я співрозмовника #}
+            <span class="chat-user-name">
+                {{ chat.other_user.username|default:"Невідомий" }}
+            </span>
+
+            {# Час останнього повідомлення #}
+            <span class="chat-item-timestamp">
+                {{ chat.last_message_time|date:"d.m" }}
+            </span>
+        </div>
+
+        {# Назва оголошення #}
+        <div class="chat-item-ad">
+            {{ chat.ad.title }}
+        </div>
+
+        {# Текст повідомлення #}
+        <div class="chat-item-message">
+            {{ chat.last_message_text|truncatewords:10|default:"..." }}
+        </div>
+    </div>
+</a>

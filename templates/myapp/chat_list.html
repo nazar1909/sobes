@@ -1,0 +1,107 @@
+{% extends "main/layout.html" %}
+{% load static %}
+
+{% block content %}
+<div class="chat-list-page-container">
+
+    <h1>Мої повідомлення</h1>
+
+    <h3>НЕПРОЧИТАНІ</h3>
+
+    <div id="unread-container" class="chat-list-container {% if not unread_chats %}d-none{% endif %}">
+        {% for chat in unread_chats %}
+            {% include 'myapp/chat_list_item.html' with chat=chat unread=True %}
+        {% endfor %}
+    </div>
+
+    <div id="unread-empty-msg" class="chat-list-empty {% if unread_chats %}d-none{% endif %}">
+        <p>🎉 Ви все прочитали!</p>
+    </div>
+
+    <hr>
+
+    <h3>ПРОЧИТАНІ</h3>
+
+    <div id="read-container" class="chat-list-container">
+        {% for chat in read_chats %}
+            {% include 'myapp/chat_list_item.html' with chat=chat unread=False %}
+        {% endfor %}
+    </div>
+
+    {% if not read_chats %}
+         <div class="chat-list-empty">
+            <p>У вас поки немає прочитаних чатів.</p>
+        </div>
+    {% endif %}
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ block.super }}
+<script>
+    window.updateChatList = function(data) {
+        console.log("⚡ Оновлюю чат у списку:", data);
+
+        // 1. Шукаємо чат. ВАЖЛИВО: переконайтеся, що в chat_list_item.html є атрибут data-sender
+        const chatItem = document.querySelector(`.chat-item[data-sender="${data.sender}"]`);
+
+        const unreadContainer = document.getElementById('unread-container');
+        const emptyMsg = document.getElementById('unread-empty-msg');
+
+        if (chatItem) {
+            // 2. Оновлюємо текст
+            const msgPreview = chatItem.querySelector('.chat-item-message');
+            if (msgPreview) msgPreview.textContent = data.content;
+
+            // 3. Робимо стиль "непрочитаний"
+            // (Переконайтеся, що у вас є CSS для цього класу, або використовуйте 'fw-bold')
+            chatItem.classList.add('chat-item-unread');
+
+            // 4. ПЕРЕМІЩЕННЯ ВГОРУ
+            if (unreadContainer) {
+                // Якщо блок непрочитаних був схований - показуємо його
+                unreadContainer.classList.remove('d-none');
+
+                // Ховаємо напис "Ви все прочитали"
+                if (emptyMsg) emptyMsg.classList.add('d-none');
+
+                // Переносимо сам елемент чату в початок контейнера непрочитаних
+                unreadContainer.prepend(chatItem);
+            }
+
+            // 5. 🔥 ЕФЕКТ СВІТІННЯ 🔥
+            // Видаляємо клас, якщо він раптом вже був (щоб перезапустити анімацію)
+            chatItem.classList.remove('flash-highlight');
+
+            // Маленька затримка, щоб браузер зрозумів, що клас було знято і додано знову
+            void chatItem.offsetWidth; // Трюк для перезапуску CSS анімації
+
+            chatItem.classList.add('flash-highlight');
+
+            // Прибираємо клас через час анімації
+            setTimeout(() => {
+                chatItem.classList.remove('flash-highlight');
+            }, 1500);
+
+        } else {
+            // Якщо це новий чат, якого нема в DOM - перезавантажуємо
+            console.log("Новий чат, перезавантажую сторінку...");
+            location.reload();
+        }
+    };
+</script>
+
+<style>
+    /* Анімація світіння */
+    @keyframes flashGlow {
+        0% { background-color: rgba(220, 53, 69, 0.0); }
+        20% { background-color: rgba(220, 53, 69, 0.2); } /* Спалах */
+        100% { background-color: transparent; }
+    }
+
+    .flash-highlight {
+        animation: flashGlow 1.5s ease-out;
+    }
+</style>
+{% endblock %}

@@ -1,3 +1,5 @@
+import json
+from django.views.decorators.http import require_POST
 from django.shortcuts import render,redirect,get_object_or_404
 from .forms import RegistrationForm,inlineformset_factory,BaseAdImageInlineFormSet
 from django.utils.html import escape
@@ -15,7 +17,7 @@ from django.utils.encoding import force_bytes
 from django.contrib.auth.models import User
 from django.http import HttpResponseForbidden,HttpResponse,HttpResponseBadRequest
 from django.http import JsonResponse
-from django.contrib.auth.forms import UserCreationForm
+from django.contrib.auth.forms import UserCreationForm, logger
 from django import forms
 from django.contrib.auth import get_user_model, update_session_auth_hash
 from django.utils.http import urlsafe_base64_decode
@@ -25,10 +27,14 @@ from django.contrib import messages
 from .forms import ProfileForm
 from django.db import transaction
 from django.http import JsonResponse
-from django.db.models import Q
-from .models import AD
+from django.db.models import Q, Exists, OuterRef, Count,F,Subquery
+from .models import AD,ChatRoom,ChatMessage,Notification
 import logging
-
+import os
+from django.utils import timezone
+from channels.layers import get_channel_layer
+from asgiref.sync import async_to_sync
+from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 
 # Create your views here.
 def home(request):
@@ -55,21 +61,102 @@ def register(request):
     return render(request, 'registration/register.html', {'form': form})
 
 
-def listing_detail(request,):
-    ads = AD.objects.all()
-    return render(request, "myapp/listing_detail.html", {"ads": ads})
+def get_paginated_data(request, queryset):
+    PAGINATE_BY = 10
+    paginator = Paginator(queryset, PAGINATE_BY)
+    page_number = request.GET.get('page')
 
+    try:
+        # Спробувати отримати сторінку
+        page_obj = paginator.get_page(page_number)
+    except PageNotAnInteger:
+        # Якщо сторінка не є числом (наприклад, ?page=abc), показати першу сторінку
+        page_obj = paginator.page(1)
+    except EmptyPage:
+        # Якщо сторінка не існує (наприклад, ?page=999), показати останню сторінку
+        page_obj = paginator.page(paginator.num_pages)
+
+    return page_obj
+
+
+def listing_detail(request):
+    # 1. Базовий запит з анотаціями
+    ads_qs = AD.objects.annotate(
+        favorites_count=Count('favorites', distinct=True),
+        conversations_count=Count('chat_rooms', distinct=True)
+    ).all().order_by('-date')
+
+    # 2. Додаємо 'is_favorited' (якщо авторизований)
+    if request.user.is_authenticated:
+        user_favorites = request.user.favorite_ads.all()
+        # Примітка: OuterRef('pk') працює коректно, але іноді швидше
+        # використовувати підзапит, що включає лише PK.
+        ads_qs = ads_qs.annotate(
+            is_favorited=Exists(user_favorites.filter(pk=OuterRef('pk')))
+        )
+
+    # 3. Логіка Режиму Відображення (List/Grid)
+    view_mode = request.GET.get('view', 'list')
+    if view_mode not in ['list', 'grid']:
+        view_mode = 'list'
+
+    # --- 4. КОРЕКТНА ПАГІНАЦІЯ ---
+
+    # A. Визначаємо номер поточної сторінки
+    # Використовуємо .get('page') для отримання параметра, default=1
+    page_number = request.GET.get('page')
+
+    # B. Створюємо об'єкт Paginator (наприклад, 10 оголошень на сторінку)
+    # 🚨 Тут ми використовуємо ads_qs, який містить усі відфільтровані/анотовані дані
+    paginator = Paginator(ads_qs, 10)
+
+    # C. Отримуємо об'єкт сторінки
+    # .get_page() безпечно обробляє відсутність параметра, нечислові значення та номери < 1
+    page_obj = paginator.get_page(page_number)
+
+    # --------------------------------
+
+    context = {
+        'page_obj': page_obj,  # Об'єкт поточної сторінки з даними
+        'view_mode': view_mode,
+        'is_paginated': True,
+        # Зазвичай передають також увесь ads_qs, якщо він потрібен,
+        # але тут page_obj містить потрібні елементи.
+    }
+    return render(request, 'myapp/listing_detail.html', context)
 def ad_detail(request, slug):
+    # 1. Отримуємо оголошення
     ad = get_object_or_404(AD, slug=slug)
-    #images=ad.image.all()
-    return render(request, "myapp/ad_detail.html", {"ad": ad})
-@login_required
+
+    # 2. ЛОГІКА ЛІЧИЛЬНИКА ПЕРЕГЛЯДІВ
+    # Збільшуємо лічильник відразу
+    ad.views += 1
+    ad.save(update_fields=['views'])
+
+    # 3. ЛОГІКА УНІКАЛЬНОЇ КІМНАТИ ЧАТУ
+    # Формуємо унікальний ідентифікатор: "IDоголошення-IDпокупця"
+    room_name = "chat_guest"
+    if request.user.is_authenticated:
+        room_name = f"{ad.id}-{request.user.id}"
+
+    # 4. ЛОГІКА ЛАЙКІВ
+    is_favorited = False
+    if request.user.is_authenticated:
+        is_favorited = ad.favorites.filter(id=request.user.id).exists()
+
+    # Рахуємо загальну кількість лайків цього оголошення
+    favorite_count = ad.favorites.count()
+
+    # 5. ЄДИНИЙ RETURN (Передаємо все в шаблон)
+    return render(request, "myapp/ad_detail.html", {
+        "ad": ad,
+        "room_name": room_name,       # Важливо для ізоляції чату
+        "is_favorited": is_favorited, # Важливо для червоного сердечка
+        "favorite_count": favorite_count # Важливо для цифри біля серця
+    })
 def favorite_ads(request):
-
-    ads = request.user.favorite_ads.all()  # через many-to-many
-    return render(request, 'myapp/favorite_ads.html', {'ads': ads})
-
-logger = logging.getLogger(__name__)
+    ads = request.user.favorite_ads.all().prefetch_related('images')  # ✅ Правильно
+    return render(request, 'myapp/favorite_ads.html', {'ads': ads}) # ✅ Правильно передана змінна 'ads'
 
 def order_ad(request, ad_id):
     ad = get_object_or_404(AD, pk=ad_id)
@@ -322,7 +409,7 @@ def toggle_favorite(request, slug):
         ad.favorites.add(user)
         is_favorite = True
 
-    favorite_count = user.favorite_ads.count()
+    favorite_count = ad.favorites.count()
 
     return JsonResponse({
         'success': True,
@@ -338,7 +425,7 @@ def edit_profile(request):
         if form.is_valid():
             form.save()
             messages.success(request, "Профіль оновлено ✅")
-            return redirect('edit_profile')
+            return redirect('my_profile')
     else:
         form = ProfileForm(instance=profile, user=request.user)
 
@@ -394,3 +481,186 @@ def public_profile(request, username):
         'profile': profile,
         'ads': ads,
     })
+
+
+@login_required
+def chat_list(request):
+    # ---------------------------------------------------------
+    # 🔥 ОНОВЛЕННЯ: Очищення бейджа
+    # Коли користувач заходить у список чатів, ми вважаємо,
+    # що він побачив сповіщення, тому видаляємо їх з БД.
+    # Це обнулить лічильник у navbar.
+    # ---------------------------------------------------------
+
+
+    # 1. Підзапит для перевірки, чи є непрочитані повідомлення
+    # (це потрібно для сортування та відображення крапки біля конкретного чату)
+    unread_subquery = ChatMessage.objects.filter(
+        room=OuterRef('pk'),
+        is_read=False
+    ).exclude(sender=request.user)
+
+    # 2. Підзапит для отримання останнього повідомлення (текст і час)
+    last_message_sq = ChatMessage.objects.filter(
+        room=OuterRef('pk')
+    ).order_by('-timestamp')
+
+    # 3. Головний запит: Отримуємо чати, анотуємо даними
+    all_user_chats = ChatRoom.objects.filter(
+        participants=request.user
+    ).select_related(
+        'ad'
+    ).prefetch_related(
+        'participants__profile'
+    ).annotate(
+        has_unread_messages=Exists(unread_subquery),
+        last_message_time=Subquery(last_message_sq.values('timestamp')[:1]),
+        last_message_text=Subquery(last_message_sq.values('content')[:1])
+    ).order_by(
+        F('has_unread_messages').desc(),  # Спочатку ті, де є непрочитані
+        F('last_message_time').desc(nulls_last=True)  # Потім за часом останнього повідомлення
+    )
+
+    unread_chats_list = []
+    read_chats_list = []
+
+    for chat in all_user_chats:
+        # Знаходимо співрозмовника (того, хто не я)
+        others = [p for p in chat.participants.all() if p != request.user]
+        chat.other_user = others[0] if others else None
+
+        if chat.has_unread_messages:
+            unread_chats_list.append(chat)
+        else:
+            read_chats_list.append(chat)
+
+    context = {
+        'unread_chats': unread_chats_list,
+        'read_chats': read_chats_list,
+    }
+
+    return render(request, 'myapp/chat_list.html', context)
+
+
+@login_required
+def chat_detail(request, chat_id):
+    chat_room = get_object_or_404(ChatRoom, id=chat_id)
+
+    # Перевірка доступу
+    if request.user not in chat_room.participants.all():
+        return HttpResponseForbidden("Ви не учасник цього чату")
+
+    # Знаходимо співрозмовника (для логіки сповіщень)
+    other_user = chat_room.participants.exclude(id=request.user.id).first()
+
+    # =================================================================
+    # 🔥 ЛОГІКА "ПРОЧИТАННЯ" (GET запит - коли відкрили сторінку)
+    # =================================================================
+    if request.method == 'GET':
+        # 1. Позначаємо повідомлення в цьому чаті як прочитані.
+        # Це автоматично зменшить лічильник unread_notifications_count у шапці.
+        ChatMessage.objects.filter(
+            room=chat_room,
+            is_read=False
+        ).exclude(
+            sender=request.user
+        ).update(is_read=True)
+
+        # 2. Видаляємо старі записи Notification для цього чату/юзера.
+        # Це потрібно для чистоти бази, щоб не накопичувати сміття.
+        if other_user:
+            Notification.objects.filter(
+                recipient=request.user,
+                sender=other_user,
+                notification_type='message'
+            ).delete()
+
+    # =================================================================
+    # 📨 ЛОГІКА ВІДПРАВКИ (POST запит)
+    # =================================================================
+    if request.method == 'POST':
+        content = request.POST.get('content', '').strip()
+        attached_file = request.FILES.get('file', None)
+
+        if content or attached_file:
+            # 1. Зберігаємо в БД
+            message = ChatMessage.objects.create(
+                room=chat_room,
+                sender=request.user,
+                content=content,
+                file=attached_file
+            )
+
+            # 2. Надсилаємо сповіщення через Channels (Redis)
+            try:
+                channel_layer = get_channel_layer()
+                # Надсилаємо всім учасникам, крім себе
+                if other_user:
+                    group_name = f"user_{other_user.id}_notifications"
+
+                    async_to_sync(channel_layer.group_send)(
+                        group_name,
+                        {
+                            'type': 'chat_notification',
+                            'message': f"{request.user.username} написав вам",  # Для тоста
+                            'sender': request.user.username,  # 🔥 ВАЖЛИВО: Для пошуку в списку чатів
+                            'content': message.content if message.content else '📷 Фото',  # 🔥 ВАЖЛИВО: Текст прев'ю
+                        }
+                    )
+            except Exception as e:
+                print(f"⚠️ Помилка Channels: {e}")
+
+            # 3. Відповідь для JavaScript (Fetch/AJAX)
+            is_ajax = request.headers.get('x-requested-with') == 'XMLHttpRequest'
+
+            if is_ajax:
+                file_url = message.file.url if message.file else None
+                return JsonResponse({
+                    'status': 'ok',
+                    'content': message.content,
+                    'timestamp': message.timestamp.strftime('%H:%M'),
+                    'file_url': file_url,
+                    'sender': request.user.username
+                })
+
+            # Фоллбек для звичайної форми
+            return redirect('chat_detail', chat_id=chat_id)
+
+        else:
+            if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+                return JsonResponse({'status': 'error', 'message': 'Empty message'}, status=400)
+
+    # =================================================================
+    # 🖥️ ВІДОБРАЖЕННЯ (GET)
+    # =================================================================
+    messages = chat_room.messages.select_related('sender__profile').all().order_by('timestamp')
+
+    return render(request, 'myapp/chat_detail.html', {
+        'chat_room': chat_room,
+        'messages': messages,
+        'other_user': other_user
+    })
+
+@login_required
+def notifications_view(request):
+    # 1. Отримуємо QuerySet (список сповіщень)
+    notifications_qs = Notification.objects.filter(recipient=request.user).order_by('-created_at')
+
+    # 2. Маркуємо як прочитані (при вході на сторінку)
+    notifications_qs.filter(is_read=False).update(is_read=True)
+
+    # 3. Пагінація
+    page_obj = get_paginated_data(request, notifications_qs)
+
+    return render(request, 'myapp/notifications.html', {
+        'page_obj': page_obj, # Передаємо об'єкт пагінації
+    })
+
+
+@login_required
+def delete_notification(request, notif_id):
+    """Видаляє сповіщення та перенаправляє назад."""
+    # Перевіряємо, чи сповіщення належить користувачу
+    notification = get_object_or_404(Notification, id=notif_id, recipient=request.user)
+    notification.delete()
+    return redirect('notifications')

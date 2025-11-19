@@ -1,0 +1,120 @@
+{% extends 'main/layout.html' %}
+{% load static %}
+
+{% block title %}Мої сповіщення{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-6">
+            <h2 class="mb-4 text-center">
+                <i class="fa-solid fa-bell me-2" style="color: var(--brand-dark);"></i>
+                Мої сповіщення
+            </h2>
+
+            <div id="notifications-container">
+                {% if notifications %}
+                    {% for n in notifications %}
+                        <div class="card shadow-sm mb-3 notification-card position-relative">
+
+                            <a href="{% url 'delete_notification' n.id %}"
+                               class="position-absolute top-0 end-0 m-2 text-muted text-decoration-none"
+                               title="Видалити"
+                               onclick="return confirm('Ви впевнені, що хочете видалити це сповіщення?')">
+                                <i class="fa-solid fa-xmark"></i>
+                            </a>
+                            <div class="card-body d-flex align-items-start">
+                                <div class="me-3 text-success">
+                                    <i class="fa-solid fa-message fa-lg mt-2"></i>
+                                </div>
+                                <div class="w-100">
+                                    <h6 class="card-title mb-1">Нове повідомлення</h6>
+                                    <p class="card-text mb-1">{{ n.message }}</p>
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <span class="notification-time">{{ n.created_at|date:"H:i d.m.Y" }}</span>
+                                        <a href="{% url 'chat_list' %}" class="btn btn-sm btn-outline-primary">
+                                            Відкрити чати
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            </div>
+
+            <div id="empty-notifications-message" class="card shadow-sm mb-4"
+                 style="{% if notifications %}display: none;{% endif %}">
+                <div class="card-body text-center py-5">
+                    <div class="text-muted mb-3">
+                        <i class="fa-regular fa-bell-slash fa-3x"></i>
+                    </div>
+                    <p class="card-text text-muted">
+                        Історія сповіщень порожня.
+                    </p>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ block.super }}
+
+<style>
+    .notification-card {
+        border-left: 5px solid var(--brand-dark);
+        transition: all 0.3s ease;
+        animation: slideIn 0.5s ease-out;
+        position: relative; /* Додано, щоб кнопка видалення працювала коректно */
+    }
+    .notification-time { font-size: 0.75rem; color: #888; }
+    @keyframes slideIn {
+        from { opacity: 0; transform: translateY(-20px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const container = document.getElementById('notifications-container');
+    const emptyMessage = document.getElementById('empty-notifications-message');
+
+    // Функція для додавання картки (викликається при отриманні WebSocket повідомлення)
+    window.addNotificationCard = function(message, time) {
+        if (emptyMessage) emptyMessage.style.display = 'none';
+
+        const card = document.createElement('div');
+        // Додаємо position-relative, щоб кнопка видалення була правильно позиціонована
+        card.className = 'card shadow-sm mb-3 notification-card position-relative';
+
+        card.innerHTML = `
+            <a href="#"
+               class="position-absolute top-0 end-0 m-2 text-muted text-decoration-none"
+               title="Видалити"
+               onclick="alert('Оновіть сторінку, щоб побачити ID і видалити'); return false;">
+                <i class="fa-solid fa-xmark"></i>
+            </a>
+
+            <div class="card-body d-flex align-items-start">
+                <div class="me-3 text-success"><i class="fa-solid fa-message fa-lg mt-2"></i></div>
+                <div class="w-100">
+                    <h6 class="card-title mb-1">Нове повідомлення</h6>
+                    <p class="card-text mb-1">${message}</p>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="notification-time">${time}</span>
+                        <a href="{% url 'chat_list' %}" class="btn btn-sm btn-outline-primary">Відкрити чати</a>
+                    </div>
+                </div>
+            </div>
+        `;
+        container.prepend(card);
+    };
+
+    // Ми не створюємо тут новий WebSocket, щоб не дублювати з'єднання з layout.html.
+    // Замість цього, ми слухаємо подію 'chat-notification', яку ми зараз додамо в layout.html
+});
+</script>
+{% endblock %}

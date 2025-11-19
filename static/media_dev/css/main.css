@@ -36,13 +36,15 @@
    1. БАЗОВИЙ МАКЕТ (Flexbox)
    ======================== */
 
-body {
+body.d-flex {
   display: flex;
   min-height: 100vh;
+  height: 100vh;     /* Тіло займає 100% висоти екрану */
+  overflow: hidden; /* Забороняємо прокрутку самого <body> */
 }
 
 /* ========================
-   2. САЙДБАР (.sidebar)
+   2. САЙДБАР (.sidebar) - ВИПРАВЛЕНО
    ======================== */
 
 .sidebar {
@@ -50,114 +52,63 @@ body {
   flex-shrink: 0;
   background-color: var(--brand-dark);
   color: var(--text-light);
-  padding: 1rem;
-}
+  height: 100vh;
+  position: relative;
+  z-index: 20; /* < (z-index залишається тут, це правильно) */
 
-/* Логотип */
+  /* [!!!] ДОДАЙТЕ ЦЕ [!!!] */
+  /* Це змусить .profile-dropdown "прилипнути" до низу */
+  display: flex;
+  flex-direction: column;
+}
+.sidebar-content-wrapper {
+  /* Займає весь вільний простір */
+  flex-grow: 1;
+
+  /* ПРОКРУТКА ТЕПЕР ТУТ */
+  overflow-y: auto;
+  overflow-x: hidden;
+
+}
 .sidebar .navbar-brand {
   text-align: center;
   margin-bottom: 1rem;
+  display: block;
 }
-
 .sidebar .navbar-brand img {
-  width: 120px;
-  height: auto;
+  width: 120px; /* <--- ЦЕЙ РОЗМІР МИ ФІКСУЄМО */
+  height: auto; /* <--- ЗБЕРІГАЄМО ПРОПОРЦІЇ */
+  display: block; /* <--- ГАРАНТУЄМО, ЩО БУДЕ БЛОКОВИМ ЕЛЕМЕНТОМ */
+  margin: 0 auto; /* <--- ЦЕНТРУВАННЯ ЗОБРАЖЕННЯ ВНУТРІ БЛОКУ */
 }
+/* ========================
+   2.1 НАВІГАЦІЯ В САЙДБАРІ (Повертаємо стилі)
+   ======================== */
 
-/* Навігація сайдбару */
+/* Загальний стиль для посилань (Чат, Обране, і т.д.) */
 .sidebar .nav-link {
   color: var(--text-light);
   text-decoration: none;
   font-size: 1.05rem;
   margin: 2px 0;
+
+  /* [!!!] СТИЛІ ДЛЯ ГАРНОГО HOVER-ЕФЕКТУ [!!!] */
+  padding: 0.7rem;
+  border-radius: var(--default-border-radius);
+  transition: background 0.3s;
 }
 
+/* Ефект при наведенні */
 .sidebar .nav-link:hover {
   background-color: rgba(255, 255, 255, 0.1);
 }
 
+/* Стилі для посилань всередині списку */
 .sidebar ul.nav-pills .nav-link {
   font-size: 1.1rem;
-  padding: 0.6rem 0.5rem;
   color: var(--text-light);
+  /* Ми не додаємо padding сюди, щоб він брався з .sidebar .nav-link */
 }
-
-/* 2.1 Кнопки дій у сайдбарі (Замість дублювання) */
-
-.sidebar a.btn-light {
-  font-weight: 700;
-  font-size: 1rem;
-  padding: 0.7rem;
-  color: var(--text-dark-secondary);
-}
-
-/* Базовий стиль для кнопок "Увійти", "Профіль", "Реєстрація" */
-.btn-sidebar-action {
-  background: var(--brand-sidebar-light);
-  border: none;
-  font-weight: 600;
-  text-align: left;
-  padding: 0.75rem 1rem;
-  margin-bottom: 0.5rem;
-  width: 100%;
-  display: block; /* Для тегів <a> */
-  text-decoration: none;
-  border-radius: var(--default-border-radius);
-  transition: background-color 0.2s ease;
-}
-.btn-sidebar-action:hover {
-  background: var(--brand-sidebar-hover);
-}
-
-/* Модифікатор для "Увійти" */
-.btn-sidebar-login {
-  color: var(--brand-success);
-}
-.btn-sidebar-login:hover {
-  color: var(--brand-success);
-}
-
-/* Модифікатор для "Зареєструватись" */
-.btn-sidebar-register {
-  color: var(--text-light);
-  font-size: 0.95rem;
-}
-.btn-sidebar-register:hover {
-  color: var(--text-light);
-}
-
-/* Модифікатор для "Профіль" */
-.btn-sidebar-profile {
-  color: var(--text-light);
-  font-size: 1rem;
-}
-.btn-sidebar-profile:hover {
-  color: var(--text-light);
-}
-
-/* 2.2 Кнопка "Вийти" */
-.btn-logout {
-    font-weight: 700;
-    color: var(--brand-danger);
-    text-align: left;
-    padding: 0.75rem 1rem;
-    font-size: 0.95rem;
-    border: 1px solid var(--brand-danger);
-    background: none;
-    box-shadow: none !important; /* Для Bootstrap */
-    transition: all 0.2s ease;
-}
-.btn-logout:hover {
-    color: var(--brand-danger-light);
-    border-color: var(--brand-danger-light);
-    background: none;
-}
-.btn-logout:focus,
-.btn-logout:active {
-    box-shadow: none !important; /* Для Bootstrap */
-    background-color: var(--brand-sidebar-hover);
-}
-
 /* ========================
    3. ОСНОВНИЙ КОНТЕНТ
    ======================== */
@@ -165,9 +116,11 @@ body {
 .main-content {
   flex-grow: 1;
   padding: 2rem;
-  overflow-y: auto;
+  overflow-y: auto; /* Вже було, але 'height' нижче - критично */
   background-color: var(--bg-light);
-  position: relative;
+
+  /* ВИПРАВЛЕНО: Додано висоту */
+  height: 100vh; /* Контент теж займає 100% висоти */
 }
 
 /* ========================
@@ -250,7 +203,11 @@ body {
   min-height: 100vh;
   padding: 2rem;
 }
-
+html, body {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+}
 .auth-container {
   width: 100%;
   max-width: 480px;
@@ -333,7 +290,7 @@ body {
 .form-wrapper textarea {
   width: 100%;
   padding: 0.75rem 1rem;
-  padding-right: 3rem; /* місце для іконки */
+  padding-right: 5.5rem; /* місце для іконки */
   border: 1.5px solid var(--border-color);
   border-radius: 0.6rem;
   font-size: 1rem;
@@ -380,11 +337,7 @@ input.is-invalid {
   transition: border-color 0.25s ease, background-color 0.25s ease, box-shadow 0.25s ease;
 }
 
-/* Якщо поле має кнопку "око", зсуваємо іконку лівіше */
-.input-with-icon input.is-valid,
-.input-with-icon input.is-invalid {
-  background-position: right 2.75rem center;
-}
+
 
 /* ===== Helptext ===== */
 .form-wrapper .helptext {
@@ -409,43 +362,8 @@ input.is-invalid {
   font-weight: 500;
 }
 
-/* ===== Кнопка "око" (toggle password) ===== */
-.input-with-icon {
-  position: relative;
-}
 
-.password-toggle {
-  position: absolute;
-  right: 0.5rem;
-  top: 50%;
-  transform: translateY(-50%);
-  background: none;
-  border: 1px solid var(--border-color);
-  border-radius: 6px;
-  width: 36px;
-  height: 36px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: background 0.2s ease, border-color 0.2s ease;
-  z-index: 2; /* поверх input */
-}
 
-.password-toggle:hover {
-  background: rgba(40, 20, 34, 0.08);
-  border-color: var(--brand-dark-light);
-}
-
-.password-toggle svg {
-  width: 18px;
-  height: 18px;
-  stroke: var(--brand-dark);
-}
-
-.password-toggle.is-active svg {
-  stroke: var(--brand-dark-light);
-}
 
 /* ===== Кнопка надсилання ===== */
 .form-wrapper button[type="submit"] {
@@ -506,42 +424,72 @@ input.is-invalid {
 }
 /* === Виправлення для кнопки "око" === */
 
-.input-with-icon {
-  position: relative;
-  overflow: visible !important; /* щоб кнопка не обрізалась */
-}
 
-.password-toggle {
-  position: absolute;
-  right: 0.5rem;
-  top: 50%;
-  transform: translateY(-50%);
-  z-index: 10 !important; /* поверх усього */
-  pointer-events: auto !important; /* дозволяє кліки */
-}
 
-.input-with-icon input {
-  position: relative;
-  z-index: 1; /* нижче за кнопку */
-}
+
+
 .input-group {
   position: relative;
-    align-items: center;
+  display: flex;
+  align-items: center;
 }
 
 
 
-/* ===== Іконка валідації (галочка/хрестик) ===== */
+.input-group,
+.form-wrapper .form-group {
+    /* Додайте це до батьківських блоків,
+       щоб вони могли позиціонувати іконки */
+    position: relative;
+}
+
+/* ЄДИНА ПОЗИЦІЯ для ОКА та ХРЕСТИКА
+*/
+.password-toggle,
+.toggle-password-btn,
+.clear-input,
 .input-icon {
-  position: absolute;
-  right: 122rem; /* залишається місце для ока */
-  top: 50%;
-  transform: translateY(-50%);
-  font-size: 1.1rem;
-  pointer-events: none;
-  transition: color 0.2s ease;
+    position: absolute;
+    right: 0.8rem; /* Одна позиція для всіх */
+    top: 50%;
+    transform: translateY(-50%);
+
+    /* Скидання стилів кнопки */
+    background: transparent;
+    border: none;
+    padding: 0.3rem;
+    cursor: pointer;
+    z-index: 3;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    /* Стилі іконки */
+    font-size: 1.1rem;
+    color: var(--brand-dark);
+    transition: color 0.2s ease;
 }
 
+/* Ефект наведення (ТІЛЬКИ для хрестика) */
+.clear-input:hover,
+.input-icon:hover {
+    color: var(--brand-dark);
+}
+/* ЗАБОРОНА :hover для Ока */
+.password-toggle:hover,
+.toggle-password-btn:hover {
+    color: var(--brand-dark); /* Залишає колір як був */
+    background: transparent;  /* Гарантовано без фону */
+}
+
+
+/* За замовчуванням ховаємо Хрестик/Валідацію */
+.clear-input,
+.input-icon {
+    display: none;
+}
+/* === КІНЕЦЬ УНІФІКОВАНОГО БЛОКУ === */
+/* === КІНЕЦЬ УНІФІКОВАНОГО СТИЛЮ === */
 .input-icon.valid-icon {
   color: var(--brand-success);
 }
@@ -550,37 +498,9 @@ input.is-invalid {
   color: var(--brand-danger);
 }
 
-/* ===== Кнопка ока ===== */
-.toggle-password-btn {
-  position: absolute;
-  right: 0.1rem;
-  top: 50%;
-  transform: translateY(-50%);
-  border: none;
-  background: transparent;
-  padding: 0;
-  cursor: pointer;
-  z-index: 10;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: auto;
-  line-height: 1;
-}
 
-/* саме це вирівнює eye по центру */
-.toggle-password-btn i {
-  display: block;
-  font-size: 1.2rem;
-  color: var(--brand-dark);
-  line-height: 1;
-  vertical-align: middle;
-  transition: color 0.2s ease;
-}
 
-.toggle-password-btn:hover i {
-  color: var(--brand-dark-light);
-}
+
 
 /* УВІЙТИ*/
 .login-wrapper {
@@ -621,7 +541,7 @@ input.is-invalid {
 
 .input-group input {
   width: 100%;
-  padding-right: 4rem; /* місце для обох іконок */
+  padding-right: 5.5rem; /* місце для обох іконок */
   border: 1.5px solid #ccc;
   border-radius: 0.6rem;
   font-size: 1rem;
@@ -632,7 +552,7 @@ input.is-invalid {
 /* === Галочка/Хрестик === */
 .input-icon {
   position: absolute;
-  right: 2.3rem;
+  right: 4.0rem;
   top: 50%;
   transform: translateY(-50%);
   font-size: 1.1rem;
@@ -649,31 +569,9 @@ input.is-invalid {
 }
 
 /* === Кнопка ока === */
-.toggle-password-btn {
-  position: absolute;
-  right: 0.6rem; /* саме край поля */
-  top: 50%;
-  transform: translateY(-50%);
-  border: none;
-  background: transparent;
-  cursor: pointer;
-  padding: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 3;
-}
 
-.toggle-password-btn i {
-  font-size: 1.2rem;
-  color: #281422;
-  line-height: 1;
-  transition: color 0.2s ease;
-}
 
-.toggle-password-btn:hover i {
-  color: #3a1a30;
-}
+
 .fw-semibold{
   color: #198754;
 }
@@ -770,14 +668,18 @@ input.is-invalid {
 }
 
 .ad-image-placeholder input[type="file"] {
+    /* Робимо інпут невидимим і "неклікабельним" */
     position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    opacity: 0;
-    cursor: pointer;
-    z-index: 10;
+    width: 1px !important;
+    height: 1px !important;
+    opacity: 0 !important;
+    overflow: hidden !important;
+
+    /* Ховаємо його позаду всього */
+    z-index: -1;
+
+    /* Він більше не перехоплює кліки */
+    pointer-events: none;
 }
 
 .placeholder-icon {
@@ -1164,8 +1066,8 @@ img.ad-detail-image[src*="placeholder.png"] {
 }
 .favorite-count-badge {
     position: absolute;
-    top: -4px;
-    right: -10px;
+    top: 5px;
+    right: 5px;
     background-color: #dc3545;
     color: #fff;
     font-size: 0.7rem;
@@ -1176,7 +1078,23 @@ img.ad-detail-image[src*="placeholder.png"] {
     box-shadow: 0 0 4px rgba(0,0,0,0.3);
     transition: transform 0.3s ease;
 }
+/* 2. Стиль для світіння (анімація) */
+@keyframes pulse-glow {
+    0% {
+        box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.7);
+    }
+    70% {
+        box-shadow: 0 0 0 7px rgba(220, 53, 69, 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(220, 53, 69, 0);
+    }
+}
 
+/* 3. Застосування світіння, коли прийшло нове сповіщення */
+.favorite-count-badge.notification-glow {
+    animation: pulse-glow 1.5s infinite; /* Анімація пульсації */
+}
 /* 🔥 анімація при оновленні */
 .favorite-count-badge.pulse {
     animation: pulseAnim 0.6s ease;
@@ -1210,7 +1128,64 @@ img.ad-detail-image[src*="placeholder.png"] {
     margin-top: 1rem;
     cursor: pointer;
     overflow: visible;
+    flex-direction: column;
+    gap: 4px; /* Маленький відступ між елементами */
+    padding: 4px; /* Маленький відступ навколо всіх елементів */
 }
+
+
+
+/* === ГОРИЗОНТАЛЬНЕ МЕНЮ (ОНОВЛЕНО) === */
+
+/* Це невидима оболонка для кнопки "Вийти" */
+.profile-menu-horizontal form {
+    margin: 0; /* Прибираємо відступи форми */
+    padding: 0;
+    display: inline; /* Робимо її "невидимою" для макету */
+    pointer-events: none;
+}
+
+/* ОДНАКОВИЙ СТИЛЬ для посилань (a) ТА кнопки (.profile-link-btn)
+*/
+.profile-menu-horizontal a,
+.profile-menu-horizontal .profile-link-btn {
+
+    /* 1. Вирівнювання (іконка НАД текстом) */
+    display: flex;
+    flex-direction: column;  /* 🔥 ОСЬ ЗМІНА: Ставимо все вертикально */
+    align-items: center;     /* Центруємо по горизонталі */
+    justify-content: center; /* Центруємо по вертикалі */
+    gap: 5px;                /* Відстань між іконкою та текстом */
+
+    /* 2. Розміри */
+    min-width: 90px;         /* Встановлюємо мінімальну ширину для кожного */
+    padding: 6px 8px;
+    border-radius: 6px;
+
+    /* 3. Текст */
+    color: #fff;
+    text-decoration: none;
+    font-family: inherit;
+    font-size: 0.9rem;       /* Трохи менший шрифт, щоб все вмістилось */
+    text-align: center;      /* Центруємо текст, якщо він у два рядки */
+
+    /* 4. Скидання стилів кнопки */
+    background: none;
+    border: none;
+    cursor: pointer;
+
+    /* 5. Анімація */
+    transition: background 0.3s;
+    pointer-events: auto;
+}
+
+/* ОДНАКОВИЙ HOVER для посилань (a) ТА кнопки (.profile-link-btn)
+*/
+.profile-menu-horizontal a:hover,
+.profile-menu-horizontal .profile-link-btn:hover {
+    background: rgba(255, 255, 255, 0.15); /* Ваш hover-ефект */
+}
+
 
 .profile-trigger {
     display: flex;
@@ -1220,6 +1195,8 @@ img.ad-detail-image[src*="placeholder.png"] {
     padding: 6px 10px;
     border-radius: 10px;
     transition: background 0.3s;
+
+
 }
 
 .profile-trigger:hover {
@@ -1235,8 +1212,17 @@ img.ad-detail-image[src*="placeholder.png"] {
 }
 
 .profile-name {
-    font-weight: 500;
-    font-size: 1.5rem;
+    /* 1. Забороняємо перенос тексту на новий рядок */
+  white-space: nowrap;
+
+  /* 2. Ховаємо все, що не вміщується */
+  overflow: hidden;
+
+  /* 3. Додаємо три крапки (...) */
+  text-overflow: ellipsis;
+
+  /* 4. "Магічний" трюк для flexbox (див. пояснення нижче) */
+  min-width: 0;
 }
 
 /* === ГОРИЗОНТАЛЬНЕ МЕНЮ === */
@@ -1256,26 +1242,16 @@ img.ad-detail-image[src*="placeholder.png"] {
     z-index: 9999;
     transition: transform 0.25s ease-in-out, opacity 0.25s ease-in-out;
     opacity: 0.5;
+    align-items: center;
 }
 
 .profile-dropdown:hover .profile-menu-horizontal {
     transform: translateY(-50%) scaleX(1);
     opacity: 1;
+
 }
 
-.profile-menu-horizontal a {
-    color: #fff;
-    text-decoration: none;
-    padding: 6px 10px;
-    border-radius: 6px;
-    display: flex;
-    align-items: center;
-    transition: background 0.3s;
-}
 
-.profile-menu-horizontal a:hover {
-    background: rgba(255, 255, 255, 0.15);
-}
 /* Контейнер */
 .profile-edit-container {
   max-width: 600px;
@@ -1750,15 +1726,20 @@ img.ad-detail-image[src*="placeholder.png"] {
 }
 /* Темний фон при відкритті */
 .profile-popup-overlay {
-  position: fixed;
-  top: 0; left: 0;
-  width: 100%; height: 100%;
-  background: rgba(0,0,0,0.7);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 1050;
-  animation: fadeIn 0.3s ease-in-out;
+position: fixed; /* Зафіксувати на екрані */
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex; /* Для центрування контенту */
+    justify-content: center;
+    align-items: center;
+    background-color: rgba(0, 0, 0, 0.5); /* Напівпрозорий чорний фон */
+    z-index: 1000; /* Перекриває весь інший контент */
+
+    /* 👇 ОСЬ ЦІ ВАЖЛИВІ РЯДКИ ДЛЯ РОЗМИТТЯ 👇 */
+    backdrop-filter: blur(8px); /* Додає ефект розмиття на фон */
+    -webkit-backdrop-filter: blur(8px); /* Для сумісності з Safari */
 }
 
 /* Вікно профілю — взято зі стилів my_profile */
@@ -1855,4 +1836,674 @@ img.ad-detail-image[src*="placeholder.png"] {
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(-10px); }
   to { opacity: 1; transform: translateY(0); }
+}
+#cropperModal {
+    display: none;
+}
+.ad-image-input-hidden {
+    /* Робимо інпут крихітним і невидимим */
+    position: absolute !important;
+    width: 1px !important;
+    height: 1px !important;
+    opacity: 0 !important;
+    overflow: hidden !important;
+
+    /* Ховаємо його позаду всього */
+    z-index: -1;
+
+    /* Він не перехоплює кліки (це робить <label>) */
+    pointer-events: none;
+}
+.ad-image-placeholder.marked-for-deletion .ad-image-preview {
+    opacity: 0.3;
+    border: 3px dashed #dc3545; /* Червона пунктирна рамка */
+    transition: opacity 0.3s ease;
+}
+
+.ad-image-placeholder.marked-for-deletion .delete-checkbox-wrapper {
+    background-color: #dc3545 !important; /* Червоний фон */
+    color: white !important;
+}
+.favorite-icon {
+  position: absolute;
+  bottom: 10px; /* <--- Змінено тут */
+  right: 10px;
+  z-index: 10;
+
+  /* --- Інші стилі --- */
+  font-size: 1.25rem;
+  background: rgba(255, 255, 255, 0.7);
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+}
+
+.favorite-icon:hover {
+  background: rgba(255, 255, 255, 1);
+}
+    /* === Базові стилі === */
+    body, html {
+        margin: 0;
+        padding: 0;
+        width: 100%;
+        height: 100%;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        background-color: #f0f2f5; /* Загальний фон сторінки (якщо чат не 100%) */
+    }
+
+    /* === ГОЛОВНИЙ КОНТЕЙНЕР (НА ВЕСЬ ЕКРАН) === */
+.chat-container {
+    display: flex;
+    flex-direction: column; /* Вертикальна структура */
+    height: calc(100vh - 4rem);    width: 100%;
+    margin: 0 auto;
+    max-width: 800px;
+    background: #ffffff; /* Загальний фон вікна - білий */
+    box-shadow: 0 0 25px rgba(0,0,0,0.05);
+    border-left: 1px solid #e9ecef;
+    border-right: 1px solid #e9ecef;
+    border-radius: 12px;
+        overflow: hidden;
+}
+
+    /* === ШАПКА ЧАТУ (ПРИКРІПЛЕНА ЗВЕРХУ) === */
+    .chat-header {
+        background: #ffffff; /* Біла шапка */
+        color: #111;
+        padding: 16px 20px;
+        z-index: 10;
+        flex-shrink: 0;
+        justify-content: space-between; /* Розносить два елементи по краях */
+        /* * ВИДАЛЕНО 'border-bottom'.
+         * Додаємо легку тінь, щоб відділити від списку.
+         */
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        display: flex;                 /* 👈 Вмикає Flexbox */
+        align-items: center;           /* 👈 Вирівнює їх по вертикалі */
+            /* 👈 Це "обріже" кути у шапки та поля вводу */
+    }
+    .chat-header,
+    .message-form {
+        flex-shrink: 0; /* 👈 Не дозволяє їм стискатися */
+    }
+    .chat-header h3 { margin: 0 0 4px 0; font-size: 18px; font-weight: 600; }
+    .chat-header p { margin: 0; font-size: 14px; color: #555; }
+    .chat-header a {
+        /* Ваш градієнт */
+        background: linear-gradient(135deg, #3a1a30, #5b2e50);
+
+        /* Робимо текст білим */
+        color: #FFFFFF;
+
+        /* Прибираємо підкреслення */
+        text-decoration: none;
+
+        /* Додаємо відступи, щоб це виглядало як кнопка */
+        padding: 8px 14px;
+
+        /* Заокруглені кути */
+        border-radius: 8px;
+
+        font-weight: 600;
+        font-size: 14px;
+        display: inline-block;
+        margin-top: 5px;
+        transition: all 0.3s ease;
+    }
+
+
+    /* === "БУЛЬБАШКИ" ПОВІДОМЛЕНЬ === */
+    .message {
+        max-width: 65%;
+        padding: 10px 14px;
+        border-radius: 18px;
+        word-wrap: break-word;
+        line-height: 1.4;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+    }
+    .message strong { display: none; }
+    .message p { margin: 0; font-size: 15px; }
+    .message .timestamp {
+        font-size: 11px;
+        color: #888;
+        margin-top: 5px;
+        display: block;
+        text-align: right;
+    }
+
+    /* === ПОВІДОМЛЕННЯ СПІВРОЗМОВНИКА (ЗЛІВА) === */
+    .message.received {
+        background-color: #ffffff; /* Біла "бульбашка" на сірому фоні */
+        border: 1px solid #e9e9e9;
+        color: #111;
+        border-top-left-radius: 4px;
+    }
+
+    /* === ВАШІ ПОВІДОМЛЕННЯ (СПРАВА) - Сині === */
+    .message.sent {
+        background-color: var(--brand-sidebar-light); /* <--- Змінено тут */        color: white;
+        border-top-right-radius: 4px;
+    }
+    .message.sent .timestamp {
+        color: rgba(255, 255, 255, 0.8);
+    }
+
+    /* === ФОРМА ВІДПРАВКИ (ПРИКРІПЛЕНА ЗНИЗУ) === */
+    .message-form {
+        display: flex;
+        align-items: center; /* Центруємо поле і кнопку */
+        padding: 12px;
+        background: #ffffff; /* Білий фон */
+        gap: 10px;
+        flex-shrink: 0;
+
+        /* * ВИДАЛЕНО 'border-top'.
+         * Додаємо тінь зверху, щоб відділити від списку.
+         */
+        box-shadow: 0 -1px 3px rgba(0, 0, 0, 0.05);
+    }
+    .message-form textarea {
+        flex-grow: 1;
+        border: 1px solid #e0e0e0; /* Легка рамка */
+        background: #f7f7f7; /* Сіре поле вводу */
+        border-radius: 18px;
+        padding: 10px 15px;
+        font-size: 15px;
+        resize: none;
+        font-family: inherit;
+        overflow: hidden;
+    }
+    .message-form textarea:focus {
+        outline: none;
+        background: #fff;
+        border-color: #5b2e50;
+    }
+    .message-form button {
+        background-color: #5b2e50;
+        color: white;
+        border: none;
+        width: 40px; /* Кругла кнопка */
+        height: 40px;
+        border-radius: 50%;
+        font-size: 18px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background-color 0.2s ease;
+        flex-shrink: 0;
+    }
+    .message-form button:hover {
+        background-color: #3c2735;
+    }
+
+
+.message-row {
+    display: flex;
+    align-items: flex-end; /* Аватари будуть внизу, біля бульбашки */
+    gap: 10px; /* Відстань між аватаром і бульбашкою */
+    margin-bottom: 12px; /* Замінює 'gap' з .message-list */
+}
+
+/* Вирівнювання вправо */
+.message-row.sent {
+    justify-content: flex-end; /* Притискає все до правого краю */
+}
+
+/* Вирівнювання вліво (за замовчуванням, але для наочності) */
+.message-row.received {
+    justify-content: flex-start;
+}
+
+/*
+ * 2. СТИЛІ ДЛЯ АВАТАРА
+ */
+.chat-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    object-fit: cover; /* Запобігає розтягуванню зображення */
+    flex-shrink: 0; /* Не дає аватару стискатися */
+    cursor: pointer;
+}
+
+/*
+ * 3. ОНОВЛЕННЯ ДЛЯ СПИСКУ ПОВІДОМЛЕНЬ
+ * Ми прибрали 'gap', оскільки тепер відступи на '.message-row'
+ */
+.message-list {
+    background-color: #f7f7f7;
+    flex-grow: 1;
+    overflow-y: auto;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    /* gap: 12px; */ /* <-- Якщо цей рядок є, видаліть його */
+}
+
+/*
+ * 4. ПОКРАЩЕННЯ ДЛЯ БУЛЬБАШОК
+ * (Щоб 'Ви:' та 'Михайло:' виглядали краще)
+ */
+.message.received strong {
+    display: block; /* Робимо ім'я окремим рядком */
+    margin-bottom: 4px;
+    color: #5b2e50; /* Робимо ім'я кольоровим */
+    font-weight: 600;
+}
+
+/* Ми ховаємо "Ви:" у ваших повідомленнях */
+.message.sent strong {
+    display: none;
+}
+    /* 1. Загальний контейнер сторінки */
+    .chat-list-page-container {
+        max-width: 800px;
+        margin: 2rem auto;
+        padding: 0 1rem;
+    }
+
+    .chat-list-page-container h1 {
+        font-weight: 700;
+        margin-bottom: 1.5rem;
+    }
+
+    .chat-list-page-container h3 {
+        font-size: 1rem;
+        font-weight: 600;
+        color: #6c757d; /* сірий */
+        margin-top: 1.5rem;
+        margin-bottom: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .chat-list-page-container hr {
+        margin: 2rem 0;
+    }
+
+    /* 2. Контейнер для списку чатів */
+    .chat-list-container {
+        background-color: #ffffff;
+        border: 1px solid #e0e0e0;
+        border-radius: 12px;
+        overflow: hidden; /* Обрізає кути для дочірніх елементів */
+        box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    }
+
+    /* 3. Стилі для окремого елемента чату (з chat_list_item.html) */
+    .chat-item { /* <-- Ваш клас */
+        display: flex;
+        align-items: center;
+        padding: 1.25rem;
+        border-bottom: 1px solid #f0f0f0;
+        text-decoration: none;
+        color: inherit;
+        transition: background-color 0.2s ease;
+    }
+
+    /* Ефект при наведенні */
+    .chat-item:hover {
+        background-color: #f8f9fa; /* Дуже світло-сірий */
+    }
+
+    /* Прибираємо рамку в останнього елемента */
+    .chat-item:last-child {
+        border-bottom: none;
+    }
+
+    /* Стиль для непрочитаного */
+    .chat-item-unread { /* <-- Ваш клас */
+        background-color: #f7f7f7; /* Легкий фон для виділення */
+    }
+
+    .chat-item-unread .chat-user-name, /* <-- Ваш клас */
+    .chat-item-unread .chat-item-message {
+        font-weight: 600; /* Жирний шрифт */
+        color: #212529; /* Темніший колір */
+    }
+
+    /* 4. Компоненти всередині chat-list-item */
+
+    /* Аватар */
+    .chat-item-avatar { /* <-- Ваш клас */
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        object-fit: cover;
+        margin-right: 15px;
+        flex-shrink: 0;
+        background-color: #e9ecef; /* Фон для плейсхолдера */
+    }
+
+    /* Адаптуємо img всередині аватара */
+    .chat-item-avatar img {
+        width: 100%;
+        height: 100%;
+        border-radius: 50%;
+        object-fit: cover;
+    }
+
+    /* Блок з інформацією (Ім'я, Оголошення, Повідомлення) */
+    .chat-item-details { /* <-- Ваш клас */
+        flex-grow: 1;
+        overflow: hidden; /* Критично для роботи 'text-overflow' */
+    }
+
+    /* Новий стиль для шапки (Ім'я + Час) */
+    .chat-item-header { /* <-- Ваш клас */
+        display: flex;
+        justify-content: space-between; /* Розносить ім'я і час по кутах */
+        align-items: center;
+        margin-bottom: 4px;
+    }
+
+    .chat-user-name { /* <-- Ваш клас */
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: #343a40;
+    }
+
+    .chat-item-ad { /* <-- Ваш клас */
+        font-size: 0.9rem;
+        color: #6c757d;
+        margin: 0 0 4px 0;
+        /* Обрізання тексту, якщо він задовгий */
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .chat-item-message { /* <-- Ваш клас */
+        font-size: 0.95rem;
+        color: #555;
+        margin: 0;
+        /* Обрізання тексту, якщо він задовгий */
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    /* Час останнього повідомлення */
+    .chat-item-timestamp { /* <-- Ваш клас */
+        font-size: 0.85rem;
+        color: #6c757d;
+        flex-shrink: 0;
+        /* 'align-self' і 'margin-left' більше не потрібні,
+           оскільки він всередині .chat-item-header */
+    }
+
+    /* 5. Повідомлення про порожні списки */
+    .chat-list-empty {
+        padding: 2rem;
+        text-align: center;
+        color: #6c757d;
+        font-size: 1.1rem;
+    }
+    .chat-list-empty p {
+        margin: 0;
+    }
+/* ЦЕЙ БЛОК НЕОБХІДНО ОНОВИТИ ВАШОМУ CSS */
+.message-input-wrapper {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    /* --- ОСЬ ВИПРАВЛЕННЯ --- */
+    min-width: 0; /* 👈 ДОЗВОЛЯЄ ТЕКСТОВОМУ ПОЛЮ РОЗТЯГУВАТИСЯ */
+}
+#file-preview { /* Контейнер для прев'ю */
+    position: absolute;
+    top: 0; /* Прив'язка до верхнього краю */
+    left: 0;
+    z-index: 10;
+    display: flex; /* Для вирівнювання елементів в ряд */
+    align-items: center;
+    gap: 8px; /* Відстань між мініатюрами */
+    padding: 8px 15px; /* Внутрішній відступ зверху */
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 15px; /* Внутрішній відступ зверху */
+    width: 100%; /* Займає всю ширину */
+}
+
+.file-preview-image {
+    width: 50px; /* Збільште розмір прев'ю */
+    height: 50px;
+    object-fit: cover;
+}
+.file-preview-inline-item {
+    display: flex;
+    align-items: center;
+    background-color: #e9ecef; /* Легкий фон */
+    border: 1px solid #ced4da;
+    border-radius: 8px;
+    padding: 3px 8px 3px 3px; /* Більше місця для видалення, менше для краю фото */
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+.file-preview-image {
+    /* (Ваш поточний код) */
+    width: 50px;
+    height: 50px;
+    object-fit: cover;
+
+    /* 🔥 КРИТИЧНО: Заокруглення кутів */
+    border-radius: 6px;
+    flex-shrink: 0;
+}
+
+.file-name-text,
+.file-name-text-small {
+    /* Налаштування тексту для імені файлу */
+    font-size: 0.85rem;
+    color: var(--text-dark);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100px; /* Обмежте ширину імені */
+    margin-left: 5px;
+}
+/* Стиль для контейнера сповіщення (Toast) */
+.notification-toast {
+    position: fixed;
+    bottom: 20px; /* Знизу */
+    right: 20px; /* Праворуч */
+    background-color: var(--brand-dark); /* Темний колір фону */
+    color: white;
+    padding: 15px 20px;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    z-index: 1050; /* Вище за модальні вікна Bootstrap */
+
+    /* Анімація: ховаємо тост за межі екрана */
+    transform: translateX(120%);
+    transition: transform 0.5s ease-in-out;
+
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    cursor: pointer;
+}
+
+/* Клас для відображення тоста */
+.notification-toast.show {
+    transform: translateX(0);
+}
+
+/* Стиль для посилання всередині тоста */
+.notification-toast .toast-link {
+    color: #ffc107; /* Жовтий або інший контрастний колір */
+    font-weight: bold;
+    text-decoration: none;
+    margin-left: auto;
+}
+
+.notification-toast .toast-link:hover {
+    color: #fff;
+    text-decoration: underline;
+}
+
+/* Адаптація для мобільних пристроїв */
+@media (max-width: 576px) {
+    .notification-toast {
+        bottom: 10px;
+        left: 10px;
+        right: 10px;
+        width: auto;
+        transform: translateY(120%);
+    }
+    .notification-toast.show {
+        transform: translateY(0);
+    }
+}
+/* --- Контейнер пагінатора --- */
+/* --- Базові Змінні Пагінатора (тепер використовують ваші загальні змінні) --- */
+:root {
+    /* Основні кольори */
+    --pagination-primary-color: var(--brand-dark); /* Активний фон - використовуємо основний темний бренд-колір */
+    --pagination-text-color: var(--text-dark); /* Колір тексту кнопок */
+    --pagination-border-color: var(--border-color); /* Колір рамки */
+
+    /* Стан при наведенні (Hover) */
+    --pagination-hover-bg: var(--bg-light);
+    --pagination-hover-border: var(--brand-dark-hover);
+
+    /* Активний стан */
+    --pagination-active-bg: var(--brand-dark);
+    --pagination-active-text: var(--text-light);
+
+    /* Вимкнений стан (Disabled) */
+    --pagination-disabled-bg: var(--bg-light);
+    --pagination-disabled-text: var(--text-muted);
+
+    /* Розміри */
+    --pagination-border-radius: var(--default-border-radius); /* Заокруглення кутів */
+    --pagination-font-size: 0.95rem;
+    --pagination-padding-y: 0.6rem;
+    --pagination-padding-x: 1rem;
+    --pagination-margin-top: 1.5rem;
+}
+
+/* --- Контейнер пагінатора --- */
+.pagination-container {
+    display: flex;
+    justify-content: center;
+    margin-top: var(--pagination-margin-top);
+    padding: 0;
+    list-style: none;
+    font-family: sans-serif;
+    align-items: center;
+}
+
+/* --- Елементи списку (li) --- */
+.pagination-item {
+
+    border-radius: var(--pagination-border-radius);
+    overflow: hidden;
+}
+
+/* --- Посилання та span (кнопки пагінації) --- */
+.pagination-link,
+.pagination-item span {
+    display: flex;
+    padding: var(--pagination-padding-y) var(--pagination-padding-x);
+    color: var(--pagination-text-color);
+    text-decoration: none;
+    background-color: var(--bg-white);
+    border: 1px solid var(--pagination-border-color);
+    font-size: var(--pagination-font-size);
+    transition: all 0.2s ease-in-out;
+    border-radius: var(--pagination-border-radius);
+    align-items: center;
+    height: 100%;
+}
+
+/* --- Стан при наведенні (Hover) --- */
+.pagination-link:hover:not(.disabled):not(.active) {
+    background-color: var(--pagination-hover-bg);
+    border-color: var(--pagination-hover-border);
+    color: var(--pagination-primary-color); /* При наведенні текст стає темним */
+    cursor: pointer;
+}
+
+/* --- Активний елемент --- */
+.pagination-item.active .pagination-link,
+.pagination-item.active span {
+    background-image: linear-gradient(135deg, #3a1a30 , #b08bb8);
+    background-color: var(--pagination-active-bg);
+    color: var(--pagination-active-text);
+    border-color: var(--pagination-active-bg);
+    pointer-events: none;
+}
+
+/* --- Вимкнений елемент (Disabled) --- */
+.pagination-item.disabled .pagination-link,
+.pagination-item.disabled span {
+    color: var(--pagination-disabled-text);
+    background-color: var(--pagination-disabled-bg);
+    cursor: not-allowed;
+    border-color: var(--pagination-border-color);
+}
+/* ============================================================
+   🔥 ФІКС ДЛЯ СПОВІЩЕНЬ (Додати в кінець файлу)
+   ============================================================ */
+
+/* 1. Визначаємо анімацію світіння (Пульсація) */
+@keyframes final-glow {
+    0% {
+        box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.7);
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.1); /* Трохи збільшується */
+    }
+    70% {
+        /* Тінь розходиться на 15px і стає прозорою */
+        box-shadow: 0 0 0 15px rgba(220, 53, 69, 0);
+        transform: scale(1);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(220, 53, 69, 0);
+        transform: scale(1);
+    }
+}
+
+/* 2. Єдиний стиль для бейджа */
+.favorite-count-badge {
+    position: absolute;
+    top: 8px;          /* Трохи нижче, щоб центрувати відносно іконки */
+    right: 15px;       /* 🔥 ВАЖЛИВО: Відсунули вліво, щоб анімацію не обрізало */
+
+    background-color: #dc3545; /* Червоний колір */
+    color: white;
+
+    font-size: 0.7rem;
+    font-weight: 700;
+
+    /* Розміри та центрування тексту */
+    min-width: 18px;
+    height: 18px;
+    padding: 0 4px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+
+    z-index: 100;      /* Щоб точно був поверх всього */
+    transition: all 0.3s ease;
+}
+
+/* 3. Клас, який додає JS */
+.favorite-count-badge.notification-glow {
+    animation: final-glow 2s infinite; /* Нескінченна пульсація */
+    background-color: #ff4b6e; /* Трохи яскравіший колір при активності */
+}
+
+/* 4. Ховаємо, якщо 0 або JS додав d-none */
+.favorite-count-badge.d-none {
+    display: none !important;
 }

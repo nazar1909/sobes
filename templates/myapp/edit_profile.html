@@ -31,10 +31,15 @@
             {{ form.phone }}
         </div>
 
-
-        <button type="submit" class="btn btn-gradient mt-3">
+        <!-- Кнопки -->
+        <div class="profile-buttons">
+            <button type="submit" class="btn btn-pink me-2">
             <i class="fa-solid fa-floppy-disk me-2"></i> Зберегти зміни
-        </button>
+            </button>
+            <a href="{%url "my_profile" %}" class="btn btn-gradient">
+                <i class="fa-solid fa-arrow-left"></i> Назад
+            </a>
+        </div>
     </form>
 </div>
 

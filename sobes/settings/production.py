@@ -1,23 +1,20 @@
 from .base import *
 import re
-
+import dj_database_url
 print("🚀 Running in PRODUCTION mode")
 
-DEBUG = True
-ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "sobes-app-production-d2a1.up.railway.app").split(",")
+DEBUG = False
+ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "sobes-prod-production.up.railway.app").split(",")
 
 # ======== Database ========
 print("✅ Connecting to PRODUCTION PostgreSQL database...")
 DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.postgresql",
-        "NAME": os.getenv("POSTGRES_DB","railway"),
-        "USER": os.getenv("POSTGRES_USER","postgres"),
-        "PASSWORD": os.getenv("POSTGRES_PASSWORD","RDfXJdxuOtFWACcJbBGrfDVVgvDgOIvN"),
-        "HOST": os.getenv("POSTGRES_HOST", "postgres.railway.internal"),
-        "PORT": os.getenv("POSTGRES_PORT", "5432"),
-    }
+    'default': dj_database_url.config(
+        default=os.environ.get('DATABASE_URL')
+    )
 }
+print(f"🔍 Using DATABASE_URL: {os.getenv('DATABASE_URL')}")
+
 
 
 
@@ -65,8 +62,10 @@ SECURE_CONTENT_TYPE_NOSNIFF = True
 SECURE_HSTS_SECONDS = 31536000
 SECURE_HSTS_INCLUDE_SUBDOMAINS = True
 SECURE_HSTS_PRELOAD = True
-SECURE_SSL_REDIRECT = False
+SECURE_SSL_REDIRECT = True
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 CSRF_TRUSTED_ORIGINS = [
     "https://sobes-app-production-d2a1.up.railway.app",
+    "https://sobes-prod-production.up.railway.app",
+
 ]

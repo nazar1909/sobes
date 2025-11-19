@@ -1,50 +1,89 @@
 {% extends 'main/layout.html' %}
 {% load static %}
+
 {% block content %}
-<h2 class="text-center my-3">💖 Вподобані оголошення</h2>
+<div class="container mt-4">
+    <h2 class="text-center mb-4">💖 Вподобані оголошення</h2>
 
-<div class="favorite-ads-container">
-    {% for ad in ads %}
-        <div class="card shadow-sm ad-management-card mb-3 position-relative">
-                <div class="row g-0">
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
 
-                    <div class="col-md-3 position-relative">
+            {% for ad in ads %}
+                <div class="card shadow-sm mb-3 position-relative overflow-hidden">
+                    <div class="row g-0">
 
+                        <div class="col-md-4 col-lg-3 position-relative" style="min-height: 160px;">
+                            {% if ad.images.all %}
+                                <img src="{{ ad.images.first.image.url }}"
+                                     alt="{{ ad.title }}"
+                                     class="w-100 h-100 object-fit-cover position-absolute top-0 start-0">
+                            {% elif ad.image %}
+                                <img src="{{ ad.image.url }}"
+                                     alt="{{ ad.title }}"
+                                     class="w-100 h-100 object-fit-cover position-absolute top-0 start-0">
+                            {% else %}
+                                <img src="{% static 'media/images/placeholder.png' %}"
+                                     alt="Немає фото"
+                                     class="w-100 h-100 object-fit-cover position-absolute top-0 start-0">
+                            {% endif %}
+                        </div>
 
-                        {% if ad.images.exists %}
-                            <img src="{{ ad.images.first.image.url }}"
-                                 alt="{{ ad.title }}"
-                                 class="ad-management-img rounded-start">
-                        {% else %}
-                            <img src="{% static 'media/images/placeholder.png' %}"
-                                 alt="Немає фото"
-                                 class="ad-management-img rounded-start">
-                        {% endif %}
+                        <div class="col-md-8 col-lg-9">
+                            <div class="card-body d-flex flex-column h-100">
+
+                                <div class="d-flex justify-content-between align-items-start mb-2 pe-5">
+                                    <h5 class="card-title mb-0 text-truncate">
+                                        <a href="{% url 'ad_detail' slug=ad.slug %}" class="text-decoration-none text-dark stretched-link">
+                                            {{ ad.title }}
+                                        </a>
+                                    </h5>
+                                    <h4 class="text-dark fw-bold mb-0 ms-3 text-nowrap">{{ ad.price|floatformat:0 }} грн</h4>
+                                </div>
+
+                                <div class="mt-auto">
+                                    <p class="card-text text-muted small mb-0">
+                                        <i class="fa-solid fa-location-dot me-1"></i> {{ ad.place|default:"Місце не вказано" }}
+                                        <span class="mx-2">•</span>
+                                        <i class="fa-regular fa-calendar-days me-1"></i> {{ ad.date|date:"d M Y" }}
+                                    </p>
+                                </div>
+
+                            </div> </div> </div> <a href="{% url 'toggle_favorite' ad.slug %}"
+                       class="position-absolute top-0 end-0 m-3 btn btn-light rounded-circle shadow-sm d-flex align-items-center justify-content-center"
+                       style="width: 40px; height: 40px; z-index: 2;">
+                        <i class="fa-solid fa-heart text-danger" style="font-size: 1.2rem;"></i>
+                    </a>
+
+                </div> {% empty %}
+                <div class="text-center py-5">
+                    <div class="mb-3 text-muted">
+                        <i class="fa-regular fa-heart fa-4x"></i>
                     </div>
+                    <h3>Список порожній</h3>
+                    <p class="text-muted">Ви ще нічого не додали до обраного.</p>
+                    <a href="{% url 'listing_detail' %}" class="btn btn-primary-dark mt-3">
+                        Перейти до оголошень
+                    </a>
+                </div>
+            {% endfor %}
 
-                    <div class="col-md-9">
-                        <div class="card-body position-relative h-100 d-flex flex-column">
-
-                            <div class="d-flex justify-content-between align-items-start mb-2">
-                                <h5 class="card-title mb-0">
-                                    <a href="{% url 'ad_detail' slug=ad.slug %}" class="stretched-link text-decoration-none text-dark">
-                                        {{ ad.title }}
-                                    </a>
-                                </h5>
-                                <h5 class="ad-price text-dark fw-bold mb-0 ms-3">{{ ad.price|floatformat:0 }} грн</h5>
-                            </div>
-
-
-                            <div class="mt-auto">
-                                <p class="card-text small text-muted mb-0 mt-2">
-                                    <i class="fa-solid fa-location-dot me-1"></i> {{ ad.place|default:"Місце не вказано" }}
-                                    <span class="mx-2">•</span>
-                                    <i class="fa-regular fa-calendar-days me-1"></i> {{ ad.date|date:"d M Y" }}
-                                </p>
-                            </div>
-    {% empty %}
-    <p class="text-center text-muted mt-4">Немає вподобаних оголошень 😔</p>
-    {% endfor %}
+        </div>
+    </div>
 </div>
 
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // 1. Видаляємо прапорець зі сховища (бо ми вже побачили нові лайки)
+        localStorage.removeItem('newFavoriteAdded');
+
+        // 2. Прибираємо світіння з меню
+        const navLink = document.getElementById('nav-favorites-link');
+        if (navLink) {
+            navLink.classList.remove('favorites-glow');
+        }
+
+        // 3. Оновлюємо лічильник в меню (якщо ми видалили щось, цифра має змінитись,
+        // але тут краще просто сховати бейдж, якщо список пустий, або залишити як є до перезавантаження)
+    });
+</script>
 {% endblock %}

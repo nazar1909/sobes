@@ -10,7 +10,7 @@ from cloudinary.models import CloudinaryField
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from cloudinary.utils import cloudinary_url
-
+from django.conf import settings
 
 import uuid
 from django.db import IntegrityError, transaction
@@ -31,7 +31,7 @@ class AD(models.Model):
     image = CloudinaryField('image', blank=True, null=True)
     slug = models.SlugField(max_length=120, unique=True, blank=True)
     favorites = models.ManyToManyField(User, related_name='favorite_ads', blank=True)
-
+    views = models.PositiveIntegerField(default=0)
     def __str__(self):
         return self.title
 
@@ -151,3 +151,86 @@ def create_or_update_user_profile(sender, instance, created, **kwargs):
     else:
         # якщо профіль існує — зберігаємо зміни
         instance.profile.save()
+
+class ChatRoom(models.Model):
+    """
+    Модель для кімнати чату, прив'язаної до оголошення.
+    (ЄДИНА ВЕРСІЯ)
+    """
+    ad = models.ForeignKey(
+        AD,
+        on_delete=models.CASCADE,
+        related_name="chat_rooms"
+    )
+    participants = models.ManyToManyField(
+        settings.AUTH_USER_MODEL,
+        related_name="chat_rooms"
+    )
+
+    def __str__(self):
+        return f"Чат для оголошення: {self.ad.title}"
+
+    def get_last_message(self):
+        """Повертає останнє повідомлення в цьому чаті."""
+        return self.messages.order_by('-timestamp').first()
+
+    def get_other_participant(self, user):
+        """Повертає іншого учасника чату, окрім поточного користувача."""
+        participants = self.participants.all()
+        # Перевіряємо, чи користувач взагалі є учасником
+        if user in participants:
+            return participants.exclude(id=user.id).first()
+        # Якщо з якоїсь причини ні - повертаємо першого, кого знайдемо
+        return participants.first()
+
+
+class ChatMessage(models.Model):
+    """
+    Модель для окремого повідомлення в чаті.
+    """
+    room = models.ForeignKey(
+        ChatRoom,
+        on_delete=models.CASCADE,
+        related_name="messages"
+    )
+    sender = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="sent_messages"
+    )
+    content = models.TextField()
+    timestamp = models.DateTimeField(auto_now_add=True)
+
+    # --- ДОДАЙТЕ ЦЕЙ РЯДОК ---
+    is_read = models.BooleanField(default=False)
+    file = CloudinaryField('chat_file', null=True, blank=True)
+    # -------------------------
+
+    def __str__(self):
+        return f"Повідомлення від {self.sender.username} в {self.room.ad.title}"
+
+    class Meta:
+        ordering = ['timestamp']
+
+
+
+class Notification(models.Model):
+    recipient = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='notifications')
+    sender = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, null=True, blank=True,
+                               related_name='sent_notifications')
+    message = models.TextField()
+    is_read = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    # Тип сповіщення (на майбутнє, якщо будуть лайки або системні повідомлення)
+    TYPE_CHOICES = (
+        ('message', 'Повідомлення'),
+        ('system', 'Системне'),
+    )
+    notification_type = models.CharField(max_length=20, choices=TYPE_CHOICES, default='message')
+
+    class Meta:
+        ordering = ['-created_at']  # Спочатку нові
+
+    def __str__(self):
+        return f"Сповіщення для {self.recipient}: {self.message[:20]}..."

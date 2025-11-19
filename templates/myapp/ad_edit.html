@@ -52,7 +52,8 @@
             </div>
         </div>
 
-        <!-- === ФОТО === -->
+
+
         <div class="card shadow-sm mb-4">
             <div class="card-header bg-white border-0 py-3">
                 <h5 class="mb-0">Фото (до 7 шт.)</h5>
@@ -62,28 +63,34 @@
 
                 {{ formset.management_form }}
 
+                {% if formset.non_form_errors %}
+                    <div class="alert alert-danger">
+                        {% for error in formset.non_form_errors %}
+                            {{ error }}
+                        {% endfor %}
+                    </div>
+                {% endif %}
+
                 <div class="row g-3 ad-image-grid">
                     {% for image_form in formset %}
                         <div class="col-6 col-md-4 col-lg-3">
                             <div class="ad-image-placeholder border rounded p-2 text-center position-relative">
+
                                 <label for="{{ image_form.image.id_for_label }}" class="ad-image-label d-block">
                                     {% if image_form.instance.pk and image_form.instance.image %}
-                                        <!-- існуюче зображення -->
                                         <img src="{{ image_form.instance.image.url }}" class="ad-image-preview img-fluid rounded" alt="Preview">
-                                        {% if image_form.DELETE %}
-                                            <div class="position-absolute top-0 end-0 m-2 bg-white px-2 py-1 rounded small text-danger">
-                                                {{ image_form.DELETE }} Видалити
-                                            </div>
-                                        {% endif %}
                                     {% else %}
-                                        <!-- порожнє місце -->
                                         <div class="add-photo-text py-4 text-muted">
                                             <i class="fa-solid fa-camera fa-2x mb-2"></i><br>
                                             <span>Додати фото</span>
                                         </div>
                                     {% endif %}
-                                    {{ image_form.image }}
                                 </label>
+
+
+
+                                {% render_field image_form.image class+="ad-image-input-hidden" %}
+
 
                                 {% if image_form.image.errors %}
                                     <div class="invalid-feedback d-block mt-1">
@@ -94,13 +101,13 @@
                                 {% if image_form.instance.pk %}
                                     {{ image_form.id }}
                                 {% endif %}
+
                             </div>
                         </div>
                     {% endfor %}
                 </div>
             </div>
         </div>
-
         <!-- === ОПИС === -->
         <div class="card shadow-sm mb-4">
             <div class="card-header bg-white border-0 py-3">
@@ -167,37 +174,59 @@
 <!-- === PREVIEW SCRIPT === -->
 <script>
 document.addEventListener('DOMContentLoaded', () => {
-  const imageInputs = document.querySelectorAll('.ad-image-grid input[type="file"]');
 
-  imageInputs.forEach(input => {
-    input.addEventListener('change', e => {
-      const file = e.target.files[0];
-      const placeholder = input.closest('.ad-image-placeholder');
-      const label = placeholder.querySelector('.ad-image-label');
+    // === Обробник ТІЛЬКИ ДЛЯ ПРЕВ'Ю зображень ===
+    const imageInputs = document.querySelectorAll('.ad-image-grid input[type="file"]');
 
-      let preview = label.querySelector('.preview-container');
-      if (!preview) {
-        preview = document.createElement('div');
-        preview.classList.add('preview-container');
-        label.insertBefore(preview, input);
-      }
-      preview.innerHTML = '';
+    imageInputs.forEach(input => {
+        input.addEventListener('change', e => {
+            const file = e.target.files[0];
+            const label = input.closest('.ad-image-label'); // Знаходимо <label>
+            if (!label) return;
 
-      if (file && (file.type.startsWith('image/') || /\.(jpg|jpeg|png|gif|webp)$/i.test(file.name))) {
-        const reader = new FileReader();
-        reader.onload = ev => {
-          const img = document.createElement('img');
-          img.src = ev.target.result;
-          img.classList.add('ad-image-preview');
-          img.alt = 'Preview';
-          preview.appendChild(img);
-        };
-        reader.readAsDataURL(file);
-      } else {
-        preview.innerHTML = '<div class="add-photo-text"><i class="fa-solid fa-camera fa-2x mb-2"></i><span>Додати фото</span></div>';
-      }
+            // Знаходимо оригінальний контент (текст "Додати" або старе фото)
+            const addPhotoText = label.querySelector('.add-photo-text');
+            const existingPreview = label.querySelector('.ad-image-preview');
+
+            // Шукаємо/створюємо контейнер для нового (клієнтського) прев'ю
+            let clientPreviewWrapper = label.querySelector('.client-preview-wrapper');
+            if (!clientPreviewWrapper) {
+                clientPreviewWrapper = document.createElement('div');
+                clientPreviewWrapper.classList.add('client-preview-wrapper');
+                label.prepend(clientPreviewWrapper); // Вставляємо на початок <label>
+            }
+
+
+            if (file && file.type.startsWith('image/')) {
+                // --- 1. Файл обрано ---
+
+                // Ховаємо оригінальний контент
+                if (addPhotoText) addPhotoText.style.display = 'none';
+                if (existingPreview) existingPreview.style.display = 'none';
+
+                // Генеруємо і показуємо нове прев'ю
+                const reader = new FileReader();
+                reader.onload = ev => {
+                    // Створюємо нове прев'ю всередині обгортки
+                    clientPreviewWrapper.innerHTML = `<img src="${ev.target.result}" class="ad-image-preview img-fluid rounded" alt="New Preview">`;
+                };
+                reader.readAsDataURL(file);
+
+            } else {
+                // --- 2. Файл НЕ обрано (або скасовано) ---
+
+                // Очищуємо контейнер нового прев'ю
+                clientPreviewWrapper.innerHTML = '';
+
+                // Повертаємо оригінальний контент
+                if (addPhotoText) addPhotoText.style.display = 'block';
+                if (existingPreview) existingPreview.style.display = 'block';
+            }
+        });
     });
-  });
+
+    // Вся логіка для кнопок "Видалити" (і стара, і нова) видалена.
+
 });
 </script>
 {% endblock %}

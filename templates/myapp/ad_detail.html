@@ -8,7 +8,11 @@
 <div class="container-fluid ad-detail-page">
   <div class="row">
     <div class="col-lg-8">
-
+        <div class="mb-2">
+          <a href="javascript:history.back()" class="text-decoration-none text-dark fw-bold">
+              <i class="fa-solid fa-arrow-left me-2"></i>Назад
+          </a>
+      </div>
       <nav aria-label="breadcrumb" class="mb-2">
         <ol class="breadcrumb bg-light p-2 rounded">
           <li class="breadcrumb-item">
@@ -20,10 +24,9 @@
         </ol>
       </nav>
 
-      {# --- БЛОК ГАЛЕРЕЇ ЗОБРАЖЕНЬ (ФІНАЛЬНА ВЕРСІЯ) --- #}
+      {# --- БЛОК ГАЛЕРЕЇ ЗОБРАЖЕНЬ --- #}
       <div class="card shadow-sm mb-4 ad-gallery-block">
         <div class="card-body p-2">
-
           {% with images=ad.images.all %}
             {% if images.exists %}
               <div id="adCarousel" class="carousel slide" data-bs-ride="carousel">
@@ -31,16 +34,12 @@
                   {% for img_obj in images %}
                     {% if img_obj.image and img_obj.image.url %}
                       <div class="carousel-item {% if forloop.first %}active{% endif %}">
-                        <img src="{{ img_obj.image.url }}"
-                             class="d-block w-100 ad-detail-image"
-                             alt="{{ ad.title|default:'Зображення' }}">
+                        <img src="{{ img_obj.image.url }}" class="d-block w-100 ad-detail-image" alt="{{ ad.title }}">
                       </div>
                     {% endif %}
                   {% empty %}
                     <div class="carousel-item active">
-                      <img src="{% static 'media/images/placeholder.png' %}"
-                           class="d-block w-100 ad-detail-image"
-                           alt="Немає фото">
+                      <img src="{% static 'media/images/placeholder.png' %}" class="d-block w-100 ad-detail-image" alt="Немає фото">
                     </div>
                   {% endfor %}
                 </div>
@@ -51,53 +50,85 @@
               <img src="{% static 'media/images/placeholder.png' %}" class="img-fluid rounded ad-detail-image" alt="Немає фото">
             {% endif %}
           {% endwith %}
-
         </div>
       </div>
-      {# --- КІНЕЦЬ БЛОКУ ГАЛЕРЕЇ --- #}
 
       <div class="card shadow-sm mb-4">
         <div class="card-header bg-white border-0 pt-3">
           <ul class="nav nav-tabs">
-            <li class="nav-item">
-              <a class="nav-link active" href="#">Опис</a>
-            </li>
+            <li class="nav-item"><a class="nav-link active" href="#">Опис</a></li>
           </ul>
         </div>
-
         <div class="card-body">
           <div class="d-flex flex-wrap gap-3 text-muted small mb-3">
             <span><i class="fa-solid fa-user me-1"></i> Приватна особа</span>
-            {# <span><i class="fa-solid fa-star me-1"></i> Стан: {{ ad.condition|default:"Вживане" }}</span> #}
             <span><i class="fa-solid fa-tag me-1"></i> Марка: {{ ad.brand|default:"Інша" }}</span>
           </div>
-
           <h5 class="mb-3">Опис</h5>
           <p class="card-text" style="white-space: pre-wrap;">{{ ad.body|default:"Опис відсутній." }}</p>
-
           <hr>
           <div class="d-flex justify-content-between text-muted small">
             <span>Переглядів: {{ ad.views|default:"0" }}</span>
           </div>
         </div>
       </div>
-
-    </div> {# КІНЕЦЬ col-lg-8 #}
+    </div>
 
     <div class="col-lg-4">
-
-      <div class="card shadow-sm mb-3">
+      <div class="card shadow-sm mb-3 position-relative">
         <div class="card-body">
           <h1 class="h3 ad-detail-title">{{ ad.title }}</h1>
           <h2 class="h1 ad-detail-price">{{ ad.price }} грн</h2>
         </div>
-      </div>
 
-        {% if request.user.is_authenticated and ad.user and ad.user != request.user %}
-          <a href="{% url 'order_ad' ad.id %}" class="btn btn-primary-dark w-100 btn-lg mb-3">
-            <i class="fa-solid fa-shield-halved me-2"></i> Купити
-          </a>
+        {% if request.user.is_authenticated and ad.user != request.user %}
+            <a href="{% url 'toggle_favorite' ad.slug %}" class="favorite-icon">
+                {% if is_favorited %}
+                    <i class="fa-solid fa-heart" style="color: var(--brand-danger);"></i>
+                {% else %}
+                    <i class="fa-regular fa-heart"></i>
+                {% endif %}
+            </a>
         {% endif %}
+        </div>
+
+      {% if request.user.is_authenticated %}
+        {% if request.user == ad.user %}
+            <div class="d-grid gap-2 mb-3">
+                <a href="{% url 'ad_edit' ad.slug %}" class="btn btn-outline-primary btn-lg">
+                    <i class="fa-solid fa-pen-to-square me-2"></i> Редагувати
+                </a>
+                <a href="{% url 'ad_deactivate' ad.id %}" class="btn btn-outline-danger btn-lg" onclick="return confirm('Ви впевнені?');">
+                    <i class="fa-solid fa-ban me-2"></i> Деактивувати
+                </a>
+            </div>
+        {% else %}
+            <button id="show-chat-btn" class="btn btn-outline-dark w-100 btn-lg mb-3">
+                <i class="fa-solid fa-comments me-2"></i> Написати продавцю
+            </button>
+
+            <div id="chat-wrapper" style="display: none;">
+                <div class="card shadow-sm mb-4">
+                    <div class="card-header bg-white border-0 py-3 d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0"><i class="fa-solid fa-comments me-2"></i> Чат з продавцем</h5>
+                        <button id="hide-chat-btn" class="btn-close" aria-label="Сховати"></button>
+                    </div>
+                    <div class="card-body">
+                        <div id="chat-log" class="border rounded p-3 chat-bubble-log" style="height: 300px; overflow-y: scroll; background-color: #f8f9fa;"></div>
+                        <div class="input-group mt-3">
+                            <input id="chat-message-input" type="text" class="form-control form-control-lg" placeholder="Напишіть повідомлення...">
+                            <button id="chat-message-submit" class="btn btn-primary-dark btn-lg">
+                                <i class="fa-solid fa-paper-plane"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <a href="{% url 'order_ad' ad.id %}" class="btn btn-primary-dark w-100 btn-lg mb-3">
+                <i class="fa-solid fa-shield-halved me-2"></i> Купити
+            </a>
+        {% endif %}
+      {% endif %}
 
       <div class="card shadow-sm mb-3">
         <div class="card-body">
@@ -109,91 +140,207 @@
           </ul>
         </div>
       </div>
-        <div class="card shadow-sm mb-3 seller-card-dark" id="sellerCard">
+
+      <div class="card shadow-sm mb-3 seller-card-dark" id="sellerCard">
           <div class="card-body text-center">
-            <h5 class="card-title h6 mb-3">
-              <i class="fa-solid fa-user"></i> Профіль продавця
-            </h5>
-
-            <div class="seller-info">
-              <img src="{{ ad.user.profile.image.url|default:'/static/media/images/placeholder.png' }}"
-                   class="seller-avatar"
-                   alt="Фото продавця">
-
-              <p class="seller-name mt-2">{{ ad.user.username }}</p>
-            </div>
+            <h5 class="card-title h6 mb-3"><i class="fa-solid fa-user"></i> Профіль продавця</h5>
+            <a href="{% url 'public_profile' username=ad.user.username %}" class="text-decoration-none text-dark">
+                <div class="seller-info">
+                  <img src="{{ ad.user.profile.image.url|default:'/static/media/images/placeholder.png' }}" class="seller-avatar" alt="Фото продавця">
+                  <p class="seller-name mt-2">{{ ad.user.username }}</p>
+                </div>
+            </a>
           </div>
-        </div>
+      </div>
+    </div>
+  </div>
+</div>
 
-                <!-- === СПЛИВАЮЧЕ ВІКНО ПРОФІЛЮ === -->
-        <div id="profilePopup" class="profile-popup-overlay" style="display: none;">
-          <div class="edit-profile-card fade-in">
-            <h2><i class="fa-solid fa-user" style="color: #3a1a30"></i> Профіль користувача</h2>
+{% endblock %}
 
-            <div class="profile-view">
-              <div class="avatar-section">
-                <img src="{{ ad.user.profile.image.url|default:'/static/media/images/placeholder.png' }}"
-                     class="profile-avatar-preview"
-                     alt="Avatar">
-              </div>
+{% block scripts %}
+{{ block.super }}
+{{ room_name|json_script:"room-slug" }}
 
-              <div class="form-group">
-                <label>Ім’я користувача</label>
-                <p>{{ ad.user.username }}</p>
-              </div>
+<style>
+    /* Стилі для чату */
+    .chat-bubble-log { display: flex; flex-direction: column; gap: 12px; }
+    .message-row { display: flex; align-items: flex-end; gap: 10px; max-width: 85%; }
+    .chat-avatar { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; flex-shrink: 0; }
+    .chat-bubble { padding: 10px 15px; border-radius: 18px; word-wrap: break-word; line-height: 1.4; }
 
-              {% if ad.user.profile.description %}
-              <div class="form-group">
-                <label>Опис</label>
-                <p>{{ ad.user.profile.description }}</p>
-              </div>
-              {% endif %}
+    .message-row.my-message { align-self: flex-end; flex-direction: row-reverse; }
+    .message-row.my-message .chat-bubble { background-color: var(--brand-dark); color: white; border-bottom-right-radius: 2px; }
 
-              {% if ad.user.profile.phone %}
-              <div class="form-group">
-                <label>Телефон</label>
-                <p>{{ ad.user.profile.phone }}</p>
-              </div>
-              {% endif %}
+    .message-row.their-message { align-self: flex-start; flex-direction: row; }
+    .message-row.their-message .chat-bubble { background-color: #f0f2f5; color: #212529; border-bottom-left-radius: 2px; }
+    .message-row.their-message .chat-bubble strong { color: var(--brand-dark); display: block; font-size: 0.8rem; margin-bottom: 2px; }
 
-              {% if ad.user.profile.location %}
-              <div class="form-group">
-                <label>Місцезнаходження</label>
-                <p>{{ ad.user.profile.location }}</p>
-              </div>
-              {% endif %}
-
-              <div class="profile-buttons">
-                <button id="closeProfileBtn" class="btn btn-gradient">
-                  <i class="fa-solid fa-arrow-left"></i> Назад
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-<script>
-document.addEventListener("DOMContentLoaded", function () {
-  const profilePopup = document.getElementById("profilePopup");
-  const closeBtn = document.getElementById("closeProfileBtn");
-  const sellerCard = document.getElementById("sellerCard");
-
-  sellerCard.addEventListener("click", function () {
-    profilePopup.style.display = "flex";
-    document.body.style.overflow = "hidden";
-  });
-
-  closeBtn.addEventListener("click", function () {
-    profilePopup.style.display = "none";
-    document.body.style.overflow = "auto";
-  });
-
-  profilePopup.addEventListener("click", function (e) {
-    if (e.target === profilePopup) {
-      profilePopup.style.display = "none";
-      document.body.style.overflow = "auto";
+    /* Стиль для лайка на картці товару */
+    .favorite-icon {
+        position: absolute !important;
+        bottom: 15px !important;
+        right: 15px !important;
+        z-index: 10 !important;
+        font-size: 1.5rem;
+        background: rgba(255, 255, 255, 0.8);
+        border-radius: 50%;
+        width: 45px;
+        height: 45px;
+        display: flex !important;
+        align-items: center;
+        justify-content: center;
+        text-decoration: none;
+        transition: transform 0.2s ease, background 0.2s;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
     }
-  });
+    .favorite-icon:hover { background: rgba(255, 255, 255, 1); transform: scale(1.1); }
+    .favorite-icon:active { transform: scale(0.95); }
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+
+    // =================================================================
+    // ЧАСТИНА 1: ЧАТ (WebSocket)
+    // =================================================================
+    const roomSlugEl = document.getElementById('room-slug');
+    const chatWrapper = document.getElementById('chat-wrapper');
+
+    if (roomSlugEl && chatWrapper) {
+        const roomSlug = JSON.parse(roomSlugEl.textContent);
+        const chatLog = document.getElementById('chat-log');
+        const messageInput = document.getElementById('chat-message-input');
+        const messageSubmit = document.getElementById('chat-message-submit');
+        const showChatBtn = document.getElementById('show-chat-btn');
+        const hideChatBtn = document.getElementById('hide-chat-btn');
+
+        function addMessageToLog(username, message, avatar_url, isHistory = false) {
+            const messageRow = document.createElement('div');
+            messageRow.classList.add('message-row');
+            const isMe = username === '{{ request.user.username }}';
+            const avatar = avatar_url || '/static/media/images/placeholder.png';
+
+            messageRow.classList.add(isMe ? 'my-message' : 'their-message');
+            let bubbleContent = message;
+            if (!isMe) bubbleContent = `<strong>${username}</strong>${message}`;
+
+            messageRow.innerHTML = `<img src="${avatar}" class="chat-avatar"><div class="chat-bubble">${bubbleContent}</div>`;
+            chatLog.appendChild(messageRow);
+            if (!isHistory || chatLog.scrollTop + chatLog.clientHeight >= chatLog.scrollHeight - 100) {
+                chatLog.scrollTop = chatLog.scrollHeight;
+            }
+        }
+
+        if (showChatBtn) showChatBtn.addEventListener('click', () => { chatWrapper.style.display = 'block'; showChatBtn.style.display = 'none'; chatLog.scrollTop = chatLog.scrollHeight; });
+        if (hideChatBtn) hideChatBtn.addEventListener('click', () => { chatWrapper.style.display = 'none'; showChatBtn.style.display = 'block'; });
+
+        const wsProtocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
+        const chatSocket = new WebSocket(wsProtocol + window.location.host + '/ws/chat/' + roomSlug + '/');
+
+        chatSocket.onmessage = function(e) {
+            const data = JSON.parse(e.data);
+            if (data.type === 'chat_history') {
+                chatLog.innerHTML = '';
+                data.messages.forEach(msg => addMessageToLog(msg.username, msg.message, msg.avatar_url, true));
+                chatLog.scrollTop = chatLog.scrollHeight;
+            } else if (data.type === 'new_message') {
+                addMessageToLog(data.username, data.message, data.avatar_url);
+            }
+        };
+
+        if (messageSubmit && messageInput) {
+            const sendMessage = () => {
+                const message = messageInput.value.trim();
+                if (message && chatSocket.readyState === WebSocket.OPEN) {
+                    chatSocket.send(JSON.stringify({'message': message}));
+                    messageInput.value = '';
+                }
+            };
+            messageSubmit.onclick = sendMessage;
+            messageInput.onkeyup = (e) => { if (e.key === 'Enter') sendMessage(); };
+        }
+    }
+
+    // =================================================================
+    // ЧАСТИНА 2: ЛАЙКИ (Favorites + GLOW + Optimistic UI)
+    // =================================================================
+    function updateLikeUI(icon, isLiked) {
+        if (isLiked) {
+            icon.classList.remove('fa-regular');
+            icon.classList.add('fa-solid');
+            icon.style.color = 'var(--brand-danger)';
+        } else {
+            icon.classList.remove('fa-solid');
+            icon.classList.add('fa-regular');
+            icon.style.color = '';
+        }
+    }
+
+    function updateNavbarBadge(count) {
+        const sidebarBadge = document.getElementById('favorite-count');
+        if (sidebarBadge) {
+            sidebarBadge.textContent = count;
+            if (parseInt(count) > 0) sidebarBadge.classList.remove('d-none');
+            else sidebarBadge.classList.add('d-none');
+        }
+    }
+
+    function triggerNavbarGlow(shouldGlow) {
+        const navFavoritesLink = document.getElementById('nav-favorites-link');
+        if (navFavoritesLink) {
+            if (shouldGlow) {
+                navFavoritesLink.classList.add('favorites-glow');
+                localStorage.setItem('newFavoriteAdded', 'true');
+            } else {
+                navFavoritesLink.classList.remove('favorites-glow');
+                localStorage.setItem('newFavoriteAdded', 'false');
+            }
+        }
+    }
+
+    document.querySelectorAll('.favorite-icon').forEach(button => {
+        button.addEventListener('click', async (event) => {
+            event.preventDefault();
+            const icon = button.querySelector('i');
+            const wasLiked = icon.classList.contains('fa-solid');
+            const isNowLiked = !wasLiked;
+
+            // 1. Оптимістичне оновлення (тільки іконка, бо тут немає лічильника лайків)
+            updateLikeUI(icon, isNowLiked);
+
+            // 2. Оптимістичне оновлення Navbar
+            const sidebarBadge = document.getElementById('favorite-count');
+            let currentGlobalCount = 0;
+            if (sidebarBadge && !sidebarBadge.classList.contains('d-none')) {
+                currentGlobalCount = parseInt(sidebarBadge.textContent) || 0;
+            }
+            let newGlobalCount = isNowLiked ? currentGlobalCount + 1 : Math.max(0, currentGlobalCount - 1);
+            updateNavbarBadge(newGlobalCount);
+
+            // 3. Запит на сервер
+            try {
+                const response = await fetch(button.href, {
+                    method: 'GET',
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                });
+                const data = await response.json();
+
+                if (data.success) {
+                    if (data.user_favorites_count !== undefined) {
+                        updateNavbarBadge(data.user_favorites_count);
+                        // Логіка світіння
+                        if (isNowLiked && parseInt(data.user_favorites_count) > 0) triggerNavbarGlow(true);
+                        else if (!isNowLiked && parseInt(data.user_favorites_count) === 0) triggerNavbarGlow(false);
+                    }
+                }
+            } catch (error) {
+                console.error('Error liking ad:', error);
+                updateLikeUI(icon, wasLiked); // Відкат
+                updateNavbarBadge(currentGlobalCount);
+            }
+        });
+    });
 });
 </script>
-
 {% endblock %}

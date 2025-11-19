@@ -8,6 +8,7 @@ import cloudinary
 import cloudinary.uploader
 import cloudinary.api
 
+
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 load_dotenv(BASE_DIR / ".env")
 
@@ -37,6 +38,8 @@ CORS_ALLOW_ALL_ORIGINS = bool_env("CORS_ALLOW_ALL_ORIGINS", default=False)
 
 # ======== Apps ========
 INSTALLED_APPS = [
+    'daphne',
+    'channels',
     'myapp.apps.MyappConfig',
     'django.contrib.admin',
     'django.contrib.auth',
@@ -79,7 +82,6 @@ SPECTACULAR_SETTINGS = {
 # ======== Middleware ========
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
-    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -87,6 +89,9 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
+if not DEBUG:
+    # Вставляємо WhiteNoise одразу після SecurityMiddleware
+    MIDDLEWARE.insert(1, 'whitenoise.middleware.WhiteNoiseMiddleware')
 
 ROOT_URLCONF = 'sobes.urls'
 
@@ -100,13 +105,13 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'myapp.context_processors.notifications_count',
             ],
         },
     },
 ]
 
-WSGI_APPLICATION = 'sobes.wsgi.application'
-
+ASGI_APPLICATION = 'sobes.asgi.application'
 
 # ======== Cloudinary / Static / Media ========
 CLOUDINARY_URL = os.getenv('CLOUDINARY_URL')
@@ -120,7 +125,10 @@ else:
     MEDIA_ROOT = BASE_DIR / 'media'
 
 STATIC_URL = '/static/'
-STATICFILES_DIRS = [BASE_DIR / "static"]
+STATICFILES_DIRS = [
+    BASE_DIR / "static",
+     # <--- ДОДАЙТЕ ЦЕЙ РЯДОК
+]
 STATIC_ROOT = BASE_DIR / "staticfiles"
 
 # ======== General ========

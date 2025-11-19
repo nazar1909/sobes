@@ -2,7 +2,7 @@ from django.contrib import admin
 from django.urls import path, include
 from myapp import views # Імпорт views
 # Явно імпортуємо функції скидання пароля, якщо вони у views.py
-from myapp.views import password_reset, password_reset_done_view, password_reset_confirm_view 
+from myapp.views import password_reset, password_reset_done_view, password_reset_confirm_view, chat_list
 
 # --- НЕОБХІДНІ ІМПОРТИ ДЛЯ МЕДІА ---
 from django.conf import settings
@@ -29,7 +29,7 @@ urlpatterns = [
     path('ad/<slug:slug>/edit/', views.ad_edit, name='ad_edit'),
     path('ad/<slug:slug>/deactivate/', views.ad_deactivate, name='ad_deactivate'),
     path('ajax/suggestions/', views.ad_suggestions, name='ad_suggestions'),
-
+    path('my-chats/', views.chat_list, name='chat_list'),
     path('ad/<slug:slug>/', views.ad_detail, name='ad_detail'),  # 🧠 <- оцей маршрут правильний
     path('accounts/logout/', auth_views.LogoutView.as_view(), name='logout'),
     path('accounts/login/', auth_views.LoginView.as_view(), name='login'),
@@ -44,6 +44,9 @@ urlpatterns = [
     path('api/v1/', include('myapp.api.urls')),
     path('api/v1/', include('myapp.api.urls')),
     path('user/<str:username>/', views.public_profile, name='public_profile'),
+    path('my-chats/<int:chat_id>/', views.chat_detail, name='chat_detail'),
+    path('notifications/', views.notifications_view, name='notifications'),
+    path('notifications/delete/<int:notif_id>/', views.delete_notification, name='delete_notification'),
 ]
 
 schema_view = get_schema_view(
@@ -58,8 +61,9 @@ schema_view = get_schema_view(
 urlpatterns += [
     path('swagger/', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
 ]
-# --- КРИТИЧНО ВАЖЛИВИЙ БЛОК ДЛЯ МЕДІА-ФАЙЛІВ ---
-if settings.DEBUG: # Перевірка, чи ввімкнено режим розробки
-    # Додаємо URL-шаблон для роздачі медіа-файлів
+if settings.DEBUG:
+    # Додаємо роздачу МЕДІА (картинки користувачів)
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+    # Додаємо роздачу СТАТИКИ (ваш CSS, JS)
+    urlpatterns += static(settings.STATIC_URL, document_root=settings.STATICFILES_DIRS[0])
 # -----------------------------------------------
