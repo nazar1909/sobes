@@ -87,8 +87,10 @@ SECURE_HSTS_PRELOAD = False
 
 # 3. CSRF Trusted Origins
 # Автоматично додаємо https:// до всіх доменів з ALLOWED_HOSTS
-CSRF_TRUSTED_ORIGINS = [f"https://{host}" for host in ALLOWED_HOSTS]
-
+CSRF_TRUSTED_ORIGINS = [
+    "http://193.56.151.227",
+    "http://193.56.151.227:8000"
+]
 # Якщо потрібно додати ще щось вручну, розкоментуйте і додайте сюди:
 # CSRF_TRUSTED_ORIGINS.extend([
 #     "https://my-custom-domain.com",
