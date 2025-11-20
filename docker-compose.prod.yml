@@ -1,5 +1,3 @@
-version: '3.9'
-
 services:
   db:
     image: postgres:14-alpine
@@ -34,10 +32,10 @@ services:
     env_file:
       - .env.railway
     command: >
-      sh -c "python wait_for_db_app &&
-               python manage.py migrate &&
-               python manage.py collectstatic --noinput &&
-               gunicorn sobes.wsgi:application --bind 0.0.0.0:8000 --workers 3 --threads 2 --timeout 120"
+      sh -c "python manage.py wait_for_db &&
+             python manage.py migrate &&
+             python manage.py collectstatic --noinput &&
+             daphne -b 0.0.0.0 -p 8000 sobes.asgi:application"
     ports:
       - "8000:8000"
     depends_on:
@@ -59,7 +57,7 @@ services:
       - .env.railway
     command: >
       sh -c "python manage.py wait_for_db &&
-               celery -A sobes worker -l info"
+             celery -A sobes worker -l info"
     depends_on:
       db:
         condition: service_healthy

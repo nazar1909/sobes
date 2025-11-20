@@ -8,7 +8,7 @@ import cloudinary
 import cloudinary.uploader
 import cloudinary.api
 
-
+# Завантаження змінних
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 load_dotenv(BASE_DIR / ".env")
 
@@ -46,6 +46,9 @@ INSTALLED_APPS = [
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
+
+    # ВАЖЛИВО: cloudinary_storage має бути вище, ніж staticfiles
+    'cloudinary_storage',
     'django.contrib.staticfiles',
 
     # Third-party
@@ -54,7 +57,6 @@ INSTALLED_APPS = [
     'wait_for_db_app',
     'django_celery_results',
     'cloudinary',
-    'cloudinary_storage',
     'rest_framework',
     'drf_spectacular',
 ]
@@ -89,8 +91,9 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
+
 if not DEBUG:
-    # Вставляємо WhiteNoise одразу після SecurityMiddleware
+    # Вставляємо WhiteNoise для статики
     MIDDLEWARE.insert(1, 'whitenoise.middleware.WhiteNoiseMiddleware')
 
 ROOT_URLCONF = 'sobes.urls'
@@ -113,23 +116,55 @@ TEMPLATES = [
 
 ASGI_APPLICATION = 'sobes.asgi.application'
 
-# ======== Cloudinary / Static / Media ========
-CLOUDINARY_URL = os.getenv('CLOUDINARY_URL')
-if CLOUDINARY_URL:
-    DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
-    STATICFILES_STORAGE = 'cloudinary_storage.storage.StaticHashedCloudinaryStorage'
-    CLOUDINARY_CLOUD_NAME = CLOUDINARY_URL.split('@')[-1] if '@' in CLOUDINARY_URL else 'default'
-    MEDIA_URL = f'https://res.cloudinary.com/{CLOUDINARY_CLOUD_NAME}/image/upload/'
-else:
-    MEDIA_URL = '/media/'
-    MEDIA_ROOT = BASE_DIR / 'media'
-
+# ======== Static Files (WhiteNoise) ========
 STATIC_URL = '/static/'
-STATICFILES_DIRS = [
-    BASE_DIR / "static",
-     # <--- ДОДАЙТЕ ЦЕЙ РЯДОК
-]
+STATICFILES_DIRS = [BASE_DIR / "static"]
 STATIC_ROOT = BASE_DIR / "staticfiles"
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+
+# ======== Cloudinary / Media Configuration ========
+# Спроба отримати довгий URL (наприклад, з Railway)
+CLOUDINARY_URL = os.environ.get('CLOUDINARY_URL')
+
+if CLOUDINARY_URL:
+    try:
+        # Парсимо URL вигляду cloudinary://API_KEY:API_SECRET@CLOUD_NAME
+        raw_config = CLOUDINARY_URL.replace('cloudinary://', '')
+        creds, cloud_name = raw_config.split('@')
+        api_key, api_secret = creds.split(':')
+
+        CLOUDINARY_STORAGE = {
+            'CLOUD_NAME': cloud_name,
+            'API_KEY': api_key,
+            'API_SECRET': api_secret,
+        }
+
+        DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
+        MEDIA_URL = f'https://res.cloudinary.com/{cloud_name}/image/upload/'
+
+        print(f"✅ Cloudinary successfully configured for cloud: {cloud_name}")
+
+    except Exception as e:
+        print(f"❌ Error parsing CLOUDINARY_URL: {e}")
+        # Fallback на локальне зберігання при помилці
+        MEDIA_URL = '/media/'
+        MEDIA_ROOT = BASE_DIR / 'media'
+else:
+    # Якщо URL немає, спробуємо знайти окремі змінні (на всяк випадок)
+    cloud_name = os.environ.get('CLOUDINARY_CLOUD_NAME')
+    if cloud_name:
+        CLOUDINARY_STORAGE = {
+            'CLOUD_NAME': cloud_name,
+            'API_KEY': os.environ.get('CLOUDINARY_API_KEY'),
+            'API_SECRET': os.environ.get('CLOUDINARY_API_SECRET'),
+        }
+        DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
+        MEDIA_URL = f'https://res.cloudinary.com/{cloud_name}/image/upload/'
+    else:
+        # Локальний режим
+        print("⚠️ No Cloudinary config found. Using local storage.")
+        MEDIA_URL = '/media/'
+        MEDIA_ROOT = BASE_DIR / 'media'
 
 # ======== General ========
 LANGUAGE_CODE = 'en-us'
