@@ -37,7 +37,7 @@ services:
              python manage.py collectstatic --noinput &&
              daphne -b 0.0.0.0 -p 8000 sobes.asgi:application"
     ports:
-      - "80:8000"
+      - "8000:8000"
     depends_on:
       db:
         condition: service_healthy
