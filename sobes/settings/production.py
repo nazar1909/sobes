@@ -72,16 +72,18 @@ else:
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
 # Примусовий редірект всіх на HTTPS
-SECURE_SSL_REDIRECT = True
+SECURE_SSL_REDIRECT = False
 
 # Інші налаштування безпеки
-SESSION_COOKIE_SECURE = True
-CSRF_COOKIE_SECURE = True
+SESSION_COOKIE_SECURE = False
+CSRF_COOKIE_SECURE = False
 SECURE_BROWSER_XSS_FILTER = True
 SECURE_CONTENT_TYPE_NOSNIFF = True
-SECURE_HSTS_SECONDS = 31536000
-SECURE_HSTS_INCLUDE_SUBDOMAINS = True
-SECURE_HSTS_PRELOAD = True
+
+# 🚨 HSTS (ОБОВ'ЯЗКОВО ВИМКНУТИ ДЛЯ HTTP)
+SECURE_HSTS_SECONDS = 0            # Було 31536000 -> стало 0
+SECURE_HSTS_INCLUDE_SUBDOMAINS = False
+SECURE_HSTS_PRELOAD = False
 
 # 3. CSRF Trusted Origins
 # Автоматично додаємо https:// до всіх доменів з ALLOWED_HOSTS
