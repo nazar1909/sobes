@@ -84,12 +84,15 @@ SECURE_CONTENT_TYPE_NOSNIFF = True
 SECURE_HSTS_SECONDS = 0            # Було 31536000 -> стало 0
 SECURE_HSTS_INCLUDE_SUBDOMAINS = False
 SECURE_HSTS_PRELOAD = False
-
+# Вимикаємо COOP, бо ми на HTTP. Це прибере помилку в консолі.
+SECURE_CROSS_ORIGIN_OPENER_POLICY = None
 # 3. CSRF Trusted Origins
 # Автоматично додаємо https:// до всіх доменів з ALLOWED_HOSTS
 CSRF_TRUSTED_ORIGINS = [
     "http://193.56.151.227",
     "http://193.56.151.227:8000"
+    "http://localhost:8000", # Про всяк випадок для локальних тестів
+    "http://127.0.0.1:8000"
 ]
 # Якщо потрібно додати ще щось вручну, розкоментуйте і додайте сюди:
 # CSRF_TRUSTED_ORIGINS.extend([
