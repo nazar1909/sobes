@@ -93,9 +93,6 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-if not DEBUG:
-    # Вставляємо WhiteNoise для статики
-    MIDDLEWARE.insert(1, 'whitenoise.middleware.WhiteNoiseMiddleware')
 
 ROOT_URLCONF = 'sobes.urls'
 
