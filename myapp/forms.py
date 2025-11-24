@@ -29,31 +29,48 @@ class RegistrationForm(UserCreationForm):
 
     def clean_password1(self):
         """
-        Додає кастомну валідацію для поля password1.
+        Валідація:
+        1. Тільки англійські літери, цифри та спецсимволи (жодної кирилиці).
+        2. Мінімум одна велика літера.
+        3. Мінімум одна цифра.
+        4. Мінімум один спецсимвол.
         """
-        # Спочатку отримуємо пароль з cleaned_data
         password = self.cleaned_data.get('password1')
 
-        # Ми перевіряємо, чи пароль взагалі існує (на випадок інших помилок)
         if password:
+            # Список дозволених спецсимволів (можеш додати або прибрати зайві)
+            special_chars_str = r'!@#$%^&*()_+\-=\[\]{};\':"\\|,.<>\/?'
 
-            # 1. Перевірка на велику літеру
+            # 1. ПЕРЕВІРКА НА МОВУ (Тільки англійські літери + цифри + спецсимволи)
+            # ^ - початок рядка, $ - кінець рядка.
+            # [a-zA-Z0-9...] - дозволений набір.
+            if not re.match(f'^[a-zA-Z0-9{re.escape(special_chars_str)}]+$', password):
+                raise ValidationError(
+                    "Пароль повинен містити тільки англійські літери, цифри та спецсимволи.",
+                    code='password_invalid_chars'
+                )
+
+            # 2. Перевірка на велику літеру (A-Z)
             if not re.search(r'[A-Z]', password):
                 raise ValidationError(
                     "Пароль повинен містити принаймні одну велику літеру (A-Z).",
                     code='password_no_upper'
                 )
 
-            # 2. Перевірка на спецсимвол
-            special_characters = r'[!@#$%^&*()_+\-=\[\]{};\':"\\|,.<>\/?]'
-            if not re.search(special_characters, password):
+            # 3. Перевірка на цифру (0-9)
+            if not re.search(r'\d', password):
                 raise ValidationError(
-                    "Пароль повинен містити принаймні один спецсимвол (наприклад, @, #, $).",
+                    "Пароль повинен містити принаймні одну цифру.",
+                    code='password_no_digit'
+                )
+
+            # 4. Перевірка на спецсимвол
+            if not re.search(f'[{re.escape(special_chars_str)}]', password):
+                raise ValidationError(
+                    "Пароль повинен містити принаймні один спецсимвол.",
                     code='password_no_special'
                 )
 
-        # Обов'язково повертаємо пароль для подальшої обробки
-        # (наприклад, для перевірки на збіг з password2)
         return password
 
 MAX_IMAGE_SIZE = 5 * 1024 * 1024  # 5 MB
