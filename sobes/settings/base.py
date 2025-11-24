@@ -115,10 +115,15 @@ TEMPLATES = [
 ASGI_APPLICATION = 'sobes.asgi.application'
 
 # ======== Static Files (WhiteNoise) ========
-STATIC_URL = '/static/'
-STATICFILES_DIRS = [BASE_DIR / "static"]
-STATIC_ROOT = BASE_DIR / "staticfiles"
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+STATICFILES_DIRS = [
+    '/app/static',
+]
+
+# 2. Куди collectstatic їх складе (це папка, звідки роздає WhiteNoise)
+STATIC_ROOT = '/app/staticfiles'
+
+# 3. WhiteNoise налаштування
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedStaticFilesStorage'
 
 # ======== Cloudinary / Media Configuration ========
 # Спроба отримати довгий URL (наприклад, з Railway)
