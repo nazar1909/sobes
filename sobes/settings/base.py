@@ -3,7 +3,6 @@ import os
 from django.core.exceptions import ImproperlyConfigured
 from distutils.util import strtobool
 from dotenv import load_dotenv
-import re
 import cloudinary
 import cloudinary.uploader
 import cloudinary.api
@@ -84,7 +83,7 @@ SPECTACULAR_SETTINGS = {
 # ======== Middleware ========
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
-    'whitenoise.middleware.WhiteNoiseMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware', # WhiteNoise має бути тут
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -115,23 +114,24 @@ TEMPLATES = [
 ASGI_APPLICATION = 'sobes.asgi.application'
 
 # ======== Static Files (WhiteNoise) ========
+# ВАЖЛИВО: STATIC_URL має бути визначений у BASE
+STATIC_URL = '/static/'
+
+# Використовуємо pathlib для надійності
 STATICFILES_DIRS = [
-    '/app/static',
+    BASE_DIR / 'static',
 ]
 
-# 2. Куди collectstatic їх складе (це папка, звідки роздає WhiteNoise)
-STATIC_ROOT = '/app/staticfiles'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
 
-# 3. WhiteNoise налаштування
+# WhiteNoise налаштування
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedStaticFilesStorage'
 
 # ======== Cloudinary / Media Configuration ========
-# Спроба отримати довгий URL (наприклад, з Railway)
 CLOUDINARY_URL = os.environ.get('CLOUDINARY_URL')
 
 if CLOUDINARY_URL:
     try:
-        # Парсимо URL вигляду cloudinary://API_KEY:API_SECRET@CLOUD_NAME
         raw_config = CLOUDINARY_URL.replace('cloudinary://', '')
         creds, cloud_name = raw_config.split('@')
         api_key, api_secret = creds.split(':')
@@ -149,11 +149,9 @@ if CLOUDINARY_URL:
 
     except Exception as e:
         print(f"❌ Error parsing CLOUDINARY_URL: {e}")
-        # Fallback на локальне зберігання при помилці
         MEDIA_URL = '/media/'
         MEDIA_ROOT = BASE_DIR / 'media'
 else:
-    # Якщо URL немає, спробуємо знайти окремі змінні (на всяк випадок)
     cloud_name = os.environ.get('CLOUDINARY_CLOUD_NAME')
     if cloud_name:
         CLOUDINARY_STORAGE = {
@@ -164,7 +162,6 @@ else:
         DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
         MEDIA_URL = f'https://res.cloudinary.com/{cloud_name}/image/upload/'
     else:
-        # Локальний режим
         print("⚠️ No Cloudinary config found. Using local storage.")
         MEDIA_URL = '/media/'
         MEDIA_ROOT = BASE_DIR / 'media'
