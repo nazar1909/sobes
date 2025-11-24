@@ -27,7 +27,7 @@ from django.contrib import messages
 from .forms import ProfileForm
 from django.db import transaction
 from django.http import JsonResponse
-from django.db.models import Q, Exists, OuterRef, Count,F,Subquery
+from django.db.models import Q, Exists, OuterRef, Count,F,Subquery,Case, When, Value, CharField
 from .models import AD,ChatRoom,ChatMessage,Notification
 import logging
 import os
@@ -40,7 +40,7 @@ from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
 from .models import AD
-from .serializers import ADSerializer
+
 
 # Create your views here.
 def home(request):
@@ -488,19 +488,9 @@ def public_profile(request, username):
         'ads': ads,
     })
 
-
 @login_required
 def chat_list(request):
-    # ---------------------------------------------------------
-    # 🔥 ОНОВЛЕННЯ: Очищення бейджа
-    # Коли користувач заходить у список чатів, ми вважаємо,
-    # що він побачив сповіщення, тому видаляємо їх з БД.
-    # Це обнулить лічильник у navbar.
-    # ---------------------------------------------------------
-
-
     # 1. Підзапит для перевірки, чи є непрочитані повідомлення
-    # (це потрібно для сортування та відображення крапки біля конкретного чату)
     unread_subquery = ChatMessage.objects.filter(
         room=OuterRef('pk'),
         is_read=False
@@ -511,7 +501,22 @@ def chat_list(request):
         room=OuterRef('pk')
     ).order_by('-timestamp')
 
-    # 3. Головний запит: Отримуємо чати, анотуємо даними
+    # 3. АНОТАЦІЯ ДЛЯ ПРЕВ'Ю ПОВІДОМЛЕННЯ (Виправлення "None")
+    last_message_content_sq = Subquery(
+        last_message_sq.annotate(
+            display_content=Case(
+                # Умова 1: Якщо контент порожній/null, але файл існує
+                When(Q(content__isnull=True) | Q(content__exact=''),
+                     Q(file__isnull=False),
+                     then=Value('📷 Фото')),
+                # Умова 2: Якщо контент не пустий, використовуємо його
+                default=F('content'),
+                output_field=CharField()
+            )
+        ).values('display_content')[:1]
+    )
+
+    # 4. Головний запит: Отримуємо чати, анотуємо даними
     all_user_chats = ChatRoom.objects.filter(
         participants=request.user
     ).select_related(
@@ -521,12 +526,14 @@ def chat_list(request):
     ).annotate(
         has_unread_messages=Exists(unread_subquery),
         last_message_time=Subquery(last_message_sq.values('timestamp')[:1]),
-        last_message_text=Subquery(last_message_sq.values('content')[:1])
+        # ВИКОРИСТОВУЄМО ОНОВЛЕНУ ЛОГІКУ З ФОЛЛБЕКОМ:
+        last_message_text=last_message_content_sq
     ).order_by(
         F('has_unread_messages').desc(),  # Спочатку ті, де є непрочитані
         F('last_message_time').desc(nulls_last=True)  # Потім за часом останнього повідомлення
     )
 
+    # 5. Розділення на прочитані/непрочитані
     unread_chats_list = []
     read_chats_list = []
 
@@ -546,7 +553,6 @@ def chat_list(request):
     }
 
     return render(request, 'myapp/chat_list.html', context)
-
 
 @login_required
 def chat_detail(request, chat_id):
@@ -723,21 +729,7 @@ def get_new_messages(request, chat_id):
 
     return JsonResponse({'status': 'ok', 'messages': results})
 
-@api_view(['GET'])
-def api_ad_list(request):
-    ads = AD.objects.all().order_by('-date')
-    serializer = ADSerializer(ads, many=True)
-    return Response(serializer.data)
 
-@api_view(['GET'])
-def api_ad_detail(request, slug):
-    try:
-        ad = AD.objects.get(slug=slug)
-    except AD.DoesNotExist:
-        return Response({'error': 'Not found'}, status=status.HTTP_404_NOT_FOUND)
-
-    serializer = ADSerializer(ad)
-    return Response(serializer.data)
 @login_required
 def start_chat(request, ad_id):
     ad = get_object_or_404(AD, pk=ad_id)
