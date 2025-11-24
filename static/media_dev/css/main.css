@@ -932,25 +932,52 @@ input.is-invalid {
     color: var(--brand-dark);
     margin-right: 5px;
 }
+/* =======================================
+   СИСТЕМНІ СТИЛІ (для притискання футера)
+   ======================================= */
+html, body {
+    height: 100%; /* Забезпечує, що Body займає всю висоту екрана */
+    margin: 0;
+    padding: 0;
+}
+
+/* Головний контейнер (МАЄ ОГОРНУТИ ВСЕ в base.html) */
+.page-wrapper {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh; /* Гарантує, що контейнер займає мінімум висоту екрана */
+}
+
+/* Обгортка контенту (МАЄ ОГОРНУТИ ВСЕ, КРІМ ФУТЕРА) */
+.content-wrap {
+    flex-grow: 1; /* Змушує контент розтягуватися і відштовхувати футер */
+}
+
 
 /* =======================================
-   11. ФУТЕР
+   11. ФУТЕР (Ваші стилі з корекцією)
    ======================================= */
-
 .page-footer {
-    /* RGB для var(--brand-dark) - 40, 20, 34 */
+    /* ЗБЕРІГАЄМО ВАШЕ ОФОРМЛЕННЯ */
     background-color: rgba(40, 20, 34, 0.8);
     backdrop-filter: blur(5px);
     color: var(--border-color-light);
-    margin-left: -2rem;  /* Компенсує padding .main-content */
-    margin-right: -2rem; /* Компенсує padding .main-content */
-    padding: 2rem 2rem; /* Додав горизонтальний padding */
+
+    /* ВИДАЛЯЄМО НЕПОТРІБНУ КОМПЕНСАЦІЮ, яка створює проблеми */
+    /* margin-left: -2rem; */
+    /* margin-right: -2rem; */
+
+    padding: 2rem 2rem;
+
+    /* Якщо ви використовуєте контейнер, краще вирівняти його */
+    /* АБО: width: 100%; */
 }
 
 .footer-logo {
     width: 100px;
     height: auto;
-    filter: invert(10%);
+    /* Фільтр, який робить його світлішим на темному фоні: */
+    filter: invert(70%);
 }
 
 .footer-text {
