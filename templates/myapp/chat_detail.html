@@ -443,6 +443,115 @@ document.addEventListener("DOMContentLoaded", () => {
     // ============================================================
     // 6. ІНІЦІАЛІЗАЦІЯ
     // ============================================================
+    // ============================================================
+    // 7. REAL-TIME ОНОВЛЕННЯ (POLLING)
+    // ============================================================
+
+    function getLastMessageId() {
+        // Знаходимо всі повідомлення
+        const rows = document.querySelectorAll('.message-row');
+        if (rows.length === 0) return 0;
+
+        // Беремо останнє і читаємо його ID
+        const lastRow = rows[rows.length - 1];
+        return lastRow.getAttribute('data-message-id') || 0;
+    }
+
+    function appendIncomingMessage(data) {
+        // Якщо це повідомлення від мене (наприклад, відкрите в іншій вкладці),
+        // ми його вже могли додати, але краще перевірити
+        if (document.querySelector(`[data-message-id="${data.id}"]`)) return;
+
+        const row = document.createElement("div");
+        row.className = data.is_me ? "message-row sent" : "message-row received";
+        row.setAttribute('data-message-id', data.id);
+
+        // Створюємо аватар
+        const avatarImg = document.createElement("img");
+        avatarImg.src = data.avatar;
+        avatarImg.className = "chat-avatar profile-trigger";
+        avatarImg.alt = data.sender;
+
+        // Дані для попапу
+        avatarImg.dataset.username = data.sender;
+        avatarImg.dataset.avatarUrl = data.avatar;
+        avatarImg.dataset.bio = data.bio;
+        avatarImg.dataset.phone = data.phone;
+        avatarImg.dataset.profileUrl = data.profile_url;
+        avatarImg.addEventListener("click", openProfilePopup);
+
+        // Створюємо блок повідомлення
+        const msgDiv = document.createElement("div");
+        msgDiv.className = data.is_me ? "message sent" : "message received";
+
+        // Додаємо ім'я, якщо це отримане повідомлення
+        if (!data.is_me) {
+            const strong = document.createElement("strong");
+            strong.textContent = data.sender + ": ";
+            msgDiv.appendChild(strong);
+        }
+
+        // Обробка файлів (спрощена)
+        if (data.file_url) {
+             const fileLink = document.createElement("a");
+             fileLink.href = data.file_url;
+             fileLink.target = "_blank";
+
+             // Якщо картинка
+             if (/\.(jpg|jpeg|png|gif)$/i.test(data.file_name)) {
+                 const img = document.createElement("img");
+                 img.src = data.file_url;
+                 img.className = "chat-message-image";
+                 fileLink.appendChild(img);
+             } else {
+                 fileLink.className = "file-link";
+                 fileLink.innerHTML = `<i class="fas fa-file me-2"></i> [Файл: ${data.file_name}]`;
+             }
+             msgDiv.appendChild(fileLink);
+        }
+
+        // Текст
+        if (data.content) {
+            const p = document.createElement("p");
+            p.textContent = data.content;
+            msgDiv.appendChild(p);
+        }
+
+        // Час
+        const timeSpan = document.createElement("span");
+        timeSpan.className = "timestamp";
+        timeSpan.textContent = data.timestamp;
+        msgDiv.appendChild(timeSpan);
+
+        // Збираємо все до купи залежно від того, хто відправив
+        if (data.is_me) {
+            row.appendChild(msgDiv);
+            row.appendChild(avatarImg);
+        } else {
+            row.appendChild(avatarImg);
+            row.appendChild(msgDiv);
+        }
+
+        messageList.appendChild(row);
+        scrollToBottom();
+    }
+
+    // Запускаємо інтервал кожні 3 секунди
+    setInterval(() => {
+        const lastId = getLastMessageId();
+
+        fetch(`/api/get_messages/${chatId}/?last_id=${lastId}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.messages && data.messages.length > 0) {
+                    data.messages.forEach(msg => {
+                        appendIncomingMessage(msg);
+                    });
+                }
+            })
+            .catch(err => console.error("Polling error:", err));
+
+    }, 3000); // 3000 мс = 3 секунди
     scrollToBottom();
     updateMessageInputHeight();
 });

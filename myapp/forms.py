@@ -227,7 +227,9 @@ class ProfileForm(forms.ModelForm):
         widgets = {
             'phone': forms.TextInput(attrs={
                 'class': 'form-control',
-                'placeholder': '+380XXXXXXXXX'
+                'placeholder': '971234567 (без 0 на початку)',  # Підказка важлива, бо вимагаємо 9 цифр
+                'type': 'tel',
+                'maxlength': '9'  # Обмежуємо ввід, щоб не вводили зайвого
             }),
         }
 
