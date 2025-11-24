@@ -100,7 +100,7 @@ STATICFILES_DIRS = [
 ]
 STATIC_URL = '/static/'
 # 2. Жорстко задаємо шлях, куди збирається статика
-STATIC_ROOT = '/app/staticfiles'
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
 # 3. Налаштування сховища (без хешування для стабільності)
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedStaticFilesStorage'
