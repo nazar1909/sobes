@@ -98,7 +98,7 @@ CHANNEL_LAYERS = {
 STATICFILES_DIRS = [
     '/app/static',
 ]
-
+STATIC_URL = '/static/'
 # 2. Жорстко задаємо шлях, куди збирається статика
 STATIC_ROOT = '/app/staticfiles'
 
