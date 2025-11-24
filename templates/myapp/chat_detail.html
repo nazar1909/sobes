@@ -56,7 +56,7 @@
     <div class="message-list" id="message-list">
         {% for message in messages %}
             {% if message.sender == request.user %}
-                <div class="message-row sent">
+                <div class="message-row sent" data-message-id="{{ message.id }}">
                     <div class="message sent">
                         {% if message.file %}
                             {% with filename=message.file.name|default:"Файл" %}
@@ -86,7 +86,7 @@
                 </div>
 
             {% else %}
-                <div class="message-row received">
+                <div class="message-row received" data-message-id="{{ message.id }}">
 
                     <img src="{% if other_user.profile.image %}{{ other_user.profile.image.url }}{% else %}{% static 'images/placeholder.png' %}{% endif %}"
                          class="chat-avatar profile-trigger"
@@ -219,53 +219,62 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
 
-    // ============================================================
-    // 1. ФУНКЦІЯ ДОДАВАННЯ ПОВІДОМЛЕНЬ (ВІД СЕБЕ)
-    // ============================================================
-    function appendSentMessage(data) {
+// ============================================================
+// 1. ФУНКЦІЯ ДОДАВАННЯ ПОВІДОМЛЕНЬ (ВІД СЕБЕ)
+// ============================================================
+function appendSentMessage(data) {
 
-        const row = document.createElement("div");
-        row.className = "message-row sent";
+    // 1. Створюємо контейнер для рядка
+    const row = document.createElement("div");
+    row.className = "message-row sent";
 
-
-
-        // ЛОГІКА ДОДАВАННЯ ФАЙЛУ ВИДАЛЕНА
-
-        // Додавання контенту повідомлення
-        if (data.content) {
-            const p = document.createElement("p");
-            p.textContent = data.content;
-            msg.appendChild(p);
-        }
-
-        // Додавання часу
-        const time = document.createElement("span");
-        time.className = "timestamp";
-        time.textContent = data.timestamp;
-        msg.appendChild(time);
-
-        // Додавання аватара
-        const avatar = document.createElement("img");
-        avatar.src = currentUser.avatar;
-        avatar.className = "chat-avatar profile-trigger";
-        avatar.alt = "Avatar";
-
-        // Присвоєння data-атрибутів для попапу профілю
-        avatar.dataset.username = currentUser.username;
-        avatar.dataset.avatarUrl = currentUser.avatar;
-        avatar.dataset.bio = currentUser.bio;
-        avatar.dataset.phone = currentUser.phone;
-        avatar.dataset.profileUrl = currentUser.url;
-
-        row.appendChild(msg);
-        row.appendChild(avatar);
-
-        messageList.appendChild(row);
-        scrollToBottom();
-
-        // Додаємо обробник кліку на новому аватарі
-        avatar.addEventListener("click", openProfilePopup);
+    // 🔥 ВАЖЛИВО: Додаємо ID, щоб скрипт оновлення (polling) бачив,
+    // що це повідомлення вже є на екрані, і не додавав його вдруге.
+    if (data.id) {
+        row.setAttribute('data-message-id', data.id);
     }
+
+    // 2. ✅ ВИПРАВЛЕНО: Створюємо блок самого повідомлення (раніше його не було)
+    const msg = document.createElement("div");
+    msg.className = "message sent";
+
+    // 3. Наповнюємо контентом
+    if (data.content) {
+        const p = document.createElement("p");
+        p.textContent = data.content;
+        msg.appendChild(p);
+    }
+
+    // Додаємо час
+    const time = document.createElement("span");
+    time.className = "timestamp";
+    time.textContent = data.timestamp;
+    msg.appendChild(time);
+
+    // 4. Створюємо аватар
+    const avatar = document.createElement("img");
+    avatar.src = currentUser.avatar;
+    avatar.className = "chat-avatar profile-trigger";
+    avatar.alt = "Avatar";
+
+    // Присвоєння data-атрибутів для попапу профілю
+    avatar.dataset.username = currentUser.username;
+    avatar.dataset.avatarUrl = currentUser.avatar;
+    avatar.dataset.bio = currentUser.bio;
+    avatar.dataset.phone = currentUser.phone;
+    avatar.dataset.profileUrl = currentUser.url;
+
+    // 5. Збираємо все разом
+    row.appendChild(msg);    // Спочатку текст
+    row.appendChild(avatar); // Потім аватар (бо це sent)
+
+    // 6. Виводимо на екран
+    messageList.appendChild(row);
+    scrollToBottom();
+
+    // Додаємо обробник кліку на новому аватарі
+    avatar.addEventListener("click", openProfilePopup);
+}
 
     // ============================================================
     // 2. ПОПАП ПРОФІЛЮ
