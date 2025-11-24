@@ -35,6 +35,7 @@ from django.utils import timezone
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+from django.views.decorators.http import require_GET
 
 # Create your views here.
 def home(request):
@@ -664,3 +665,55 @@ def delete_notification(request, notif_id):
     notification = get_object_or_404(Notification, id=notif_id, recipient=request.user)
     notification.delete()
     return redirect('notifications')
+
+
+@login_required
+@require_GET
+def get_new_messages(request, chat_id):
+    # 1. Отримуємо ID останнього повідомлення, яке вже є на клієнті
+    # Якщо параметр не передали, вважаємо, що це 0
+    last_id = request.GET.get('last_id', 0)
+
+    # 2. Шукаємо тільки НОВІ повідомлення в цьому чаті
+    # id__gt означає "id greater than" (більше ніж)
+    new_messages = ChatMessage.objects.filter(
+        chat_room_id=chat_id,
+        id__gt=last_id
+    ).order_by('timestamp')
+
+    results = []
+    for msg in new_messages:
+        # Визначаємо, чи це повідомлення поточного юзера
+        is_me = msg.sender == request.user
+
+        # Обробка файлу (якщо є)
+        file_url = msg.file.url if msg.file else None
+        file_name = msg.file.name.split('/')[-1] if msg.file else None
+
+        # Обробка аватара (безпечно, якщо профілю чи фото немає)
+        avatar_url = '/static/images/placeholder.png'
+        bio = ''
+        phone = ''
+
+        if hasattr(msg.sender, 'profile'):
+            if msg.sender.profile.image:
+                avatar_url = msg.sender.profile.image.url
+            bio = msg.sender.profile.bio or ''
+            phone = msg.sender.profile.phone or ''
+
+        # 3. Формуємо структуру даних для JavaScript
+        results.append({
+            'id': msg.id,
+            'content': msg.content,
+            'timestamp': msg.timestamp.strftime('%d.%m %H:%M'),  # Форматування часу
+            'sender': msg.sender.username,
+            'is_me': is_me,
+            'avatar': avatar_url,
+            'bio': bio,
+            'phone': phone,
+            'profile_url': f"/profile/{msg.sender.username}/",  # 👈 Перевірте свій URL для профілю
+            'file_url': file_url,
+            'file_name': file_name,
+        })
+
+    return JsonResponse({'status': 'ok', 'messages': results})

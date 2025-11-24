@@ -227,8 +227,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const row = document.createElement("div");
         row.className = "message-row sent";
 
-        const msg = document.createElement("div");
-        msg.className = "message sent";
+
 
         // ЛОГІКА ДОДАВАННЯ ФАЙЛУ ВИДАЛЕНА
 
@@ -443,26 +442,20 @@ document.addEventListener("DOMContentLoaded", () => {
     // ============================================================
     // 6. ІНІЦІАЛІЗАЦІЯ
     // ============================================================
-    // ============================================================
-    // 7. REAL-TIME ОНОВЛЕННЯ (POLLING)
-    // ============================================================
 
-    function getLastMessageId() {
-        // Знаходимо всі повідомлення
-        const rows = document.querySelectorAll('.message-row');
-        if (rows.length === 0) return 0;
+    scrollToBottom();
+    updateMessageInputHeight();
+    // ==========================================
+    // ЛОГІКА ОТРИМАННЯ ПОВІДОМЛЕНЬ (REAL-TIME)
+    // ==========================================
 
-        // Беремо останнє і читаємо його ID
-        const lastRow = rows[rows.length - 1];
-        return lastRow.getAttribute('data-message-id') || 0;
-    }
-
+    // 1. Функція для малювання отриманого повідомлення
     function appendIncomingMessage(data) {
-        // Якщо це повідомлення від мене (наприклад, відкрите в іншій вкладці),
-        // ми його вже могли додати, але краще перевірити
+        // Перевірка, щоб не дублювати повідомлення
         if (document.querySelector(`[data-message-id="${data.id}"]`)) return;
 
         const row = document.createElement("div");
+        // Якщо це моє повідомлення (відкрите в іншій вкладці) -> sent, якщо чуже -> received
         row.className = data.is_me ? "message-row sent" : "message-row received";
         row.setAttribute('data-message-id', data.id);
 
@@ -470,34 +463,33 @@ document.addEventListener("DOMContentLoaded", () => {
         const avatarImg = document.createElement("img");
         avatarImg.src = data.avatar;
         avatarImg.className = "chat-avatar profile-trigger";
-        avatarImg.alt = data.sender;
-
         // Дані для попапу
         avatarImg.dataset.username = data.sender;
         avatarImg.dataset.avatarUrl = data.avatar;
         avatarImg.dataset.bio = data.bio;
         avatarImg.dataset.phone = data.phone;
         avatarImg.dataset.profileUrl = data.profile_url;
+
+        // Додаємо клік на аватар (щоб відкривав профіль)
         avatarImg.addEventListener("click", openProfilePopup);
 
-        // Створюємо блок повідомлення
+        // Створюємо блок з текстом
         const msgDiv = document.createElement("div");
         msgDiv.className = data.is_me ? "message sent" : "message received";
 
-        // Додаємо ім'я, якщо це отримане повідомлення
+        // Ім'я (тільки для чужих)
         if (!data.is_me) {
             const strong = document.createElement("strong");
             strong.textContent = data.sender + ": ";
             msgDiv.appendChild(strong);
         }
 
-        // Обробка файлів (спрощена)
+        // Якщо є файл
         if (data.file_url) {
              const fileLink = document.createElement("a");
              fileLink.href = data.file_url;
              fileLink.target = "_blank";
 
-             // Якщо картинка
              if (/\.(jpg|jpeg|png|gif)$/i.test(data.file_name)) {
                  const img = document.createElement("img");
                  img.src = data.file_url;
@@ -510,7 +502,7 @@ document.addEventListener("DOMContentLoaded", () => {
              msgDiv.appendChild(fileLink);
         }
 
-        // Текст
+        // Текст повідомлення
         if (data.content) {
             const p = document.createElement("p");
             p.textContent = data.content;
@@ -523,7 +515,7 @@ document.addEventListener("DOMContentLoaded", () => {
         timeSpan.textContent = data.timestamp;
         msgDiv.appendChild(timeSpan);
 
-        // Збираємо все до купи залежно від того, хто відправив
+        // Збираємо структуру (порядок залежить від того, хто писав)
         if (data.is_me) {
             row.appendChild(msgDiv);
             row.appendChild(avatarImg);
@@ -532,28 +524,40 @@ document.addEventListener("DOMContentLoaded", () => {
             row.appendChild(msgDiv);
         }
 
+        // Додаємо в чат
         messageList.appendChild(row);
         scrollToBottom();
     }
 
-    // Запускаємо інтервал кожні 3 секунди
+    // 2. Допоміжна функція: знайти ID останнього повідомлення
+    function getLastMessageId() {
+        const rows = document.querySelectorAll('.message-row');
+        if (rows.length === 0) return 0;
+        const lastRow = rows[rows.length - 1];
+        // Якщо атрибута немає, повертаємо 0
+        return lastRow.getAttribute('data-message-id') || 0;
+    }
+
+    // 3. ЗАПУСК ТАЙМЕРА (Кожні 2 секунди)
     setInterval(() => {
         const lastId = getLastMessageId();
 
+        // Звертаємося до API, яке ми прописали в api/urls.py
         fetch(`/api/get_messages/${chatId}/?last_id=${lastId}`)
-            .then(response => response.json())
+            .then(response => {
+                if (!response.ok) return null;
+                return response.json();
+            })
             .then(data => {
-                if (data.messages && data.messages.length > 0) {
+                if (data && data.messages && data.messages.length > 0) {
                     data.messages.forEach(msg => {
                         appendIncomingMessage(msg);
                     });
                 }
             })
-            .catch(err => console.error("Polling error:", err));
+            .catch(err => console.error("Chat update error:", err));
 
-    }, 3000); // 3000 мс = 3 секунди
-    scrollToBottom();
-    updateMessageInputHeight();
+    }, 2000);
 });
 </script>
 {% endblock %}
