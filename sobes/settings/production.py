@@ -2,7 +2,7 @@ import os
 import dj_database_url
 from .base import * # Імпортуємо всі налаштування з base.py
 
-print("🚀 Running in PRODUCTION mode (Fixed Configuration)")
+print("🚀 Running in PRODUCTION mode (HTTP/IP Fix)")
 
 DEBUG = False
 
@@ -11,6 +11,7 @@ DEBUG = False
 # ==========================================
 allowed_hosts_env = os.getenv("ALLOWED_HOSTS", "localhost,127.0.0.1")
 ALLOWED_HOSTS = allowed_hosts_env.split(",")
+
 # Додаємо ваш IP та домен вручну
 if "193.56.151.227" not in ALLOWED_HOSTS:
     ALLOWED_HOSTS.append("193.56.151.227")
@@ -43,7 +44,6 @@ if redis_url:
             "OPTIONS": {"CLIENT_CLASS": "django_redis.client.DefaultClient"},
         }
     }
-    # Channels Configuration
     CHANNEL_LAYERS = {
         "default": {
             "BACKEND": "channels_redis.core.RedisChannelLayer",
@@ -53,14 +53,12 @@ if redis_url:
         },
     }
 else:
-    # Fallback if no redis provided (але для каналів потрібен Redis)
     CACHES = {
         'default': {
             'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
             'LOCATION': 'unique-snowflake',
         }
     }
-    # Для Channels краще використати Redis, але якщо його немає:
     CHANNEL_LAYERS = {
         "default": {
             "BACKEND": "channels.layers.InMemoryChannelLayer"
@@ -75,13 +73,24 @@ CELERY_RESULT_BACKEND = redis_url if redis_url else "django-db"
 CELERY_TASK_ALWAYS_EAGER = False
 
 # ==========================================
-# 5. SECURITY & HTTP
+# 5. SECURITY & HTTP (ВИПРАВЛЕНО)
 # ==========================================
-# Увімкніть це, якщо у вас є HTTPS (через Cloudflare або Nginx)
+
+# ВАЖЛИВО: Оскільки ви використовуєте HTTP (IP-адреса),
+# ми мусимо явно ВИМКНУТИ Secure-флаги, інакше куки не запишуться
+# і тестер "губитиме" сесію.
+
+SECURE_SSL_REDIRECT = False
+SESSION_COOKIE_SECURE = False
+CSRF_COOKIE_SECURE = False
+
+# Це виправить помилку "Cross-Origin-Opener-Policy ... untrustworthy" в консолі
+# Ми вимикаємо цей заголовок, бо він працює тільки на HTTPS
+SECURE_CROSS_ORIGIN_OPENER_POLICY = None
+
+# Якщо ви заходите через проксі (nginx/cloudflare), іноді потрібно це,
+# але для прямого доступу по IP можна залишити закоментованим або налаштувати:
 # SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
-# SECURE_SSL_REDIRECT = True
-# SESSION_COOKIE_SECURE = True
-# CSRF_COOKIE_SECURE = True
 
 CSRF_TRUSTED_ORIGINS = [
     "http://193.56.151.227",
@@ -89,5 +98,4 @@ CSRF_TRUSTED_ORIGINS = [
     "https://sobes-prod-production.up.railway.app",
 ]
 
-# Статика вже налаштована в base.py, але підтверджуємо рут
 print(f"✅ Config loaded. Static Root: {STATIC_ROOT}")
