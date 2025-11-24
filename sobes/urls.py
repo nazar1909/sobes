@@ -47,6 +47,7 @@ urlpatterns = [
     path('my-chats/<int:chat_id>/', views.chat_detail, name='chat_detail'),
     path('notifications/', views.notifications_view, name='notifications'),
     path('notifications/delete/<int:notif_id>/', views.delete_notification, name='delete_notification'),
+    path('ad/<int:ad_id>/start-chat/', views.start_chat, name='start_chat'),
 ]
 
 schema_view = get_schema_view(

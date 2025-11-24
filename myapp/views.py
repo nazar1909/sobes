@@ -36,6 +36,11 @@ from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.views.decorators.http import require_GET
+from rest_framework.decorators import api_view
+from rest_framework.response import Response
+from rest_framework import status
+from .models import AD
+from .serializers import ADSerializer
 
 # Create your views here.
 def home(request):
@@ -151,7 +156,7 @@ def ad_detail(request, slug):
     # 5. ЄДИНИЙ RETURN (Передаємо все в шаблон)
     return render(request, "myapp/ad_detail.html", {
         "ad": ad,
-        "room_name": room_name,       # Важливо для ізоляції чату
+         # Важливо для ізоляції чату
         "is_favorited": is_favorited, # Важливо для червоного сердечка
         "favorite_count": favorite_count # Важливо для цифри біля серця
     })
@@ -717,3 +722,59 @@ def get_new_messages(request, chat_id):
         })
 
     return JsonResponse({'status': 'ok', 'messages': results})
+
+@api_view(['GET'])
+def api_ad_list(request):
+    ads = AD.objects.all().order_by('-date')
+    serializer = ADSerializer(ads, many=True)
+    return Response(serializer.data)
+
+@api_view(['GET'])
+def api_ad_detail(request, slug):
+    try:
+        ad = AD.objects.get(slug=slug)
+    except AD.DoesNotExist:
+        return Response({'error': 'Not found'}, status=status.HTTP_404_NOT_FOUND)
+
+    serializer = ADSerializer(ad)
+    return Response(serializer.data)
+@login_required
+def start_chat(request, ad_id):
+    ad = get_object_or_404(AD, pk=ad_id)
+    seller = ad.user
+    buyer = request.user
+
+    # 1. Захист від чату із самим собою
+    if seller == buyer:
+        messages.error(request, "Ви не можете почати чат із власним оголошенням.")
+        return redirect('ad_detail', slug=ad.slug)
+
+    # 2. Пошук або створення кімнати
+    # Шукаємо чат, пов'язаний з цим оголошенням, де покупець є учасником.
+    try:
+        # Можна використовувати ChatRoom.objects.get, але filter() + first() більш гнучкий.
+        # Шукаємо кімнату, де оголошення = ad, і в якій є обидва учасники.
+        chat_room = ChatRoom.objects.filter(
+            ad=ad,
+            participants=buyer
+        ).annotate(
+             is_seller_present=Exists(ChatRoom.participants.through.objects.filter(
+                 chatroom_id=OuterRef('pk'),
+                 user=seller
+             ))
+        ).filter(is_seller_present=True).first()
+
+
+        if not chat_room:
+             # Створення нової кімнати, якщо не знайдено
+             chat_room = ChatRoom.objects.create(ad=ad)
+             chat_room.participants.add(seller, buyer)
+
+    except Exception:
+        # У разі будь-якої помилки (наприклад, проблем з participants), створити нову
+        chat_room = ChatRoom.objects.create(ad=ad)
+        chat_room.participants.add(seller, buyer)
+
+
+    # 3. Перенаправляємо на деталі чату
+    return redirect('chat_detail', chat_id=chat_room.id)
