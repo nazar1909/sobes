@@ -490,18 +490,16 @@ def public_profile(request, username):
 
 @login_required
 def chat_list(request):
-    # 1. Підзапит для перевірки, чи є непрочитані повідомлення
+    # 1. Підзапити (залишаємо як було)
     unread_subquery = ChatMessage.objects.filter(
         room=OuterRef('pk'),
         is_read=False
     ).exclude(sender=request.user)
 
-    # 2. Підзапит для отримання останнього повідомлення
     last_message_sq = ChatMessage.objects.filter(
         room=OuterRef('pk')
     ).order_by('-timestamp')
 
-    # 3. АНОТАЦІЯ ДЛЯ ПРЕВ'Ю (Текст або "Фото")
     last_message_content_sq = Subquery(
         last_message_sq.annotate(
             display_content=Case(
@@ -514,27 +512,28 @@ def chat_list(request):
         ).values('display_content')[:1]
     )
 
-    # 4. ГОЛОВНИЙ ЗАПИТ (Додано фільтрацію пустих чатів)
+    # 2. ГОЛОВНИЙ ЗАПИТ
     all_user_chats = ChatRoom.objects.filter(
         participants=request.user
-    ).annotate(
-        msg_count=Count('messages')   # <--- РАХУЄМО ПОВІДОМЛЕННЯ
-    ).filter(
-        msg_count__gt=0               # <--- ВІДСІЮЄМО ТІ, ДЕ 0 ПОВІДОМЛЕНЬ
     ).select_related(
         'ad'
     ).prefetch_related(
         'participants__profile'
     ).annotate(
+        # Спочатку обчислюємо всі дані
         has_unread_messages=Exists(unread_subquery),
         last_message_time=Subquery(last_message_sq.values('timestamp')[:1]),
         last_message_text=last_message_content_sq
+    ).filter(
+        # [!!!] ГОЛОВНА ЗМІНА ТУТ [!!!]
+        # Ми кажемо: залиш тільки ті чати, де час останнього повідомлення НЕ пустий.
+        last_message_time__isnull=False
     ).order_by(
         F('has_unread_messages').desc(),
         F('last_message_time').desc(nulls_last=True)
     )
 
-    # 5. Розділення на списки
+    # 3. Розділення на списки (залишаємо як було)
     unread_chats_list = []
     read_chats_list = []
 
@@ -553,6 +552,7 @@ def chat_list(request):
     }
 
     return render(request, 'myapp/chat_list.html', context)
+
 @login_required
 def chat_detail(request, chat_id):
     chat_room = get_object_or_404(ChatRoom, id=chat_id)
