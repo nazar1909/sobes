@@ -48,12 +48,14 @@
                     </div>
 
                     {% if request.user.is_authenticated and ad.user != request.user %}
-                        <a href="{% url 'toggle_favorite' ad.slug %}" class="favorite-icon">
-                            {% if ad.is_favorited %}
-                                <i class="fa-solid fa-heart" style="color: var(--brand-danger);"></i>
+                        <a href="{% url 'toggle_favorite' ad.slug %}" class="favorite-icon text-decoration-none">
+
+                            {% if ad.id in favorite_ad_ids %}
+                                <i class="fa-solid fa-heart text-danger"></i>
                             {% else %}
-                                <i class="fa-regular fa-heart"></i>
+                                <i class="fa-regular fa-heart text-dark"></i>
                             {% endif %}
+
                         </a>
                     {% endif %}
                 </div>
