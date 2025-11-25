@@ -193,62 +193,62 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // === 3. ГОЛОВНА ЛОГІКА КЛІКУ (ОДИН РАЗ!) ===
     document.querySelectorAll('.favorite-icon').forEach(button => {
-        button.addEventListener('click', async (event) => {
-            event.preventDefault(); // 1. Зупиняємо перехід на JSON (білий екран)
+            button.addEventListener('click', async (event) => {
+                event.preventDefault();
 
-            const card = button.closest('.card');
-            const adId = card.getAttribute('data-ad-id');
-            const countSpan = card.querySelector('.favorite-count');
+                const card = button.closest('.card');
+                const adId = card.getAttribute('data-ad-id');
+                const countSpan = card.querySelector('.favorite-count');
 
-            // Оголошуємо sidebarBadge ТУТ, щоб уникнути помилки
-            const sidebarBadge = document.getElementById('favorite-count');
+                // [!!!] ОСЬ ТУТ БУЛА ПОМИЛКА. ДОДАЙТЕ ЦЕЙ РЯДОК: [!!!]
+                const sidebarBadge = document.getElementById('favorite-count');
+                // Тепер змінна sidebarBadge існує, і помилки не буде
 
-            const icon = button.querySelector('i');
-            const wasLiked = icon.classList.contains('fa-solid');
-            const isNowLiked = !wasLiked;
+                const icon = button.querySelector('i');
+                const wasLiked = icon.classList.contains('fa-solid');
+                const isNowLiked = !wasLiked;
 
-            // --- А. МИТТЄВА МАТЕМАТИКА (UI Optimistic Update) ---
+                // --- А. МИТТЄВА МАТЕМАТИКА (UI Optimistic Update) ---
 
-            // 1. Оновлюємо картку
-            let currentCardCount = countSpan ? (parseInt(countSpan.textContent.replace(/\D/g, '')) || 0) : 0;
-            let newCardCount = isNowLiked ? currentCardCount + 1 : Math.max(0, currentCardCount - 1);
+                // 1. Оновлюємо картку
+                let currentCardCount = countSpan ? (parseInt(countSpan.textContent.replace(/\D/g, '')) || 0) : 0;
+                let newCardCount = isNowLiked ? currentCardCount + 1 : Math.max(0, currentCardCount - 1);
 
-            updateLikeUI(card, isNowLiked, newCardCount);
-            if (adId) sessionStorage.setItem(`ad_liked_${adId}`, isNowLiked);
+                updateLikeUI(card, isNowLiked, newCardCount);
+                if (adId) sessionStorage.setItem(`ad_liked_${adId}`, isNowLiked);
 
-            // 2. Оновлюємо Сайдбар (Navbar)
-            if (sidebarBadge) {
-                let currentGlobalCount = 0;
-                if (!sidebarBadge.classList.contains('d-none')) {
-                    currentGlobalCount = parseInt(sidebarBadge.textContent) || 0;
-                }
-                let newGlobalCount = isNowLiked ? currentGlobalCount + 1 : Math.max(0, currentGlobalCount - 1);
-                updateNavbarBadge(newGlobalCount);
-            }
-
-            // --- Б. ЗАПИТ НА СЕРВЕР ---
-            try {
-                const response = await fetch(button.href, {
-                    method: 'GET',
-                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
-                });
-                const data = await response.json();
-
-                if (data.success) {
-                    // Синхронізуємо точні дані з сервера (Source of Truth)
-                    if (countSpan) {
-                        updateLikeUI(card, isNowLiked, data.favorite_count);
+                // 2. Оновлюємо Сайдбар (Navbar)
+                // Тепер цей блок коду спрацює, бо sidebarBadge знайдено вище
+                if (sidebarBadge) {
+                    let currentGlobalCount = 0;
+                    if (!sidebarBadge.classList.contains('d-none')) {
+                        currentGlobalCount = parseInt(sidebarBadge.textContent) || 0;
                     }
-                    if (data.user_favorites_count !== undefined) {
-                        updateNavbarBadge(data.user_favorites_count);
-                    }
+                    let newGlobalCount = isNowLiked ? currentGlobalCount + 1 : Math.max(0, currentGlobalCount - 1);
+                    updateNavbarBadge(newGlobalCount);
                 }
-            } catch (error) {
-                console.error('Error:', error);
-                // Якщо помилка мережі — відкочуємо зміни назад
-                updateLikeUI(card, wasLiked, currentCardCount);
-            }
-        });
+
+                // --- Б. ЗАПИТ НА СЕРВЕР ---
+                try {
+                    const response = await fetch(button.href, {
+                        method: 'GET',
+                        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                    });
+                    const data = await response.json();
+
+                    if (data.success) {
+                        if (countSpan) {
+                            updateLikeUI(card, isNowLiked, data.favorite_count);
+                        }
+                        if (data.user_favorites_count !== undefined) {
+                            updateNavbarBadge(data.user_favorites_count);
+                        }
+                    }
+                } catch (error) {
+                    console.error('Error:', error);
+                    updateLikeUI(card, wasLiked, currentCardCount);
+                }
+            });
     });
 
     // === 4. ЛІЧИЛЬНИК ПЕРЕГЛЯДІВ ===
