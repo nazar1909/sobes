@@ -496,29 +496,31 @@ def chat_list(request):
         is_read=False
     ).exclude(sender=request.user)
 
-    # 2. Підзапит для отримання останнього повідомлення (текст і час)
+    # 2. Підзапит для отримання останнього повідомлення
     last_message_sq = ChatMessage.objects.filter(
         room=OuterRef('pk')
     ).order_by('-timestamp')
 
-    # 3. АНОТАЦІЯ ДЛЯ ПРЕВ'Ю ПОВІДОМЛЕННЯ (Виправлення "None")
+    # 3. АНОТАЦІЯ ДЛЯ ПРЕВ'Ю (Текст або "Фото")
     last_message_content_sq = Subquery(
         last_message_sq.annotate(
             display_content=Case(
-                # Умова 1: Якщо контент порожній/null, але файл існує
                 When(Q(content__isnull=True) | Q(content__exact=''),
                      Q(file__isnull=False),
                      then=Value('📷 Фото')),
-                # Умова 2: Якщо контент не пустий, використовуємо його
                 default=F('content'),
                 output_field=CharField()
             )
         ).values('display_content')[:1]
     )
 
-    # 4. Головний запит: Отримуємо чати, анотуємо даними
+    # 4. ГОЛОВНИЙ ЗАПИТ (Додано фільтрацію пустих чатів)
     all_user_chats = ChatRoom.objects.filter(
         participants=request.user
+    ).annotate(
+        msg_count=Count('messages')   # <--- РАХУЄМО ПОВІДОМЛЕННЯ
+    ).filter(
+        msg_count__gt=0               # <--- ВІДСІЮЄМО ТІ, ДЕ 0 ПОВІДОМЛЕНЬ
     ).select_related(
         'ad'
     ).prefetch_related(
@@ -526,19 +528,17 @@ def chat_list(request):
     ).annotate(
         has_unread_messages=Exists(unread_subquery),
         last_message_time=Subquery(last_message_sq.values('timestamp')[:1]),
-        # ВИКОРИСТОВУЄМО ОНОВЛЕНУ ЛОГІКУ З ФОЛЛБЕКОМ:
         last_message_text=last_message_content_sq
     ).order_by(
-        F('has_unread_messages').desc(),  # Спочатку ті, де є непрочитані
-        F('last_message_time').desc(nulls_last=True)  # Потім за часом останнього повідомлення
+        F('has_unread_messages').desc(),
+        F('last_message_time').desc(nulls_last=True)
     )
 
-    # 5. Розділення на прочитані/непрочитані
+    # 5. Розділення на списки
     unread_chats_list = []
     read_chats_list = []
 
     for chat in all_user_chats:
-        # Знаходимо співрозмовника (того, хто не я)
         others = [p for p in chat.participants.all() if p != request.user]
         chat.other_user = others[0] if others else None
 
@@ -553,7 +553,6 @@ def chat_list(request):
     }
 
     return render(request, 'myapp/chat_list.html', context)
-
 @login_required
 def chat_detail(request, chat_id):
     chat_room = get_object_or_404(ChatRoom, id=chat_id)
