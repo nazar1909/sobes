@@ -50,7 +50,7 @@
 
                             </div> </div> </div>
                     <a href="{% url 'toggle_favorite' ad.slug %}"
-                       class="js-remove-fav position-absolute top-0 end-0 m-3 btn btn-light rounded-circle shadow-sm d-flex align-items-center justify-content-center"
+                       class="position-absolute top-0 end-0 m-3 btn btn-light rounded-circle shadow-sm d-flex align-items-center justify-content-center"
                        style="width: 40px; height: 40px; z-index: 2;">
                         <i class="fa-solid fa-heart text-danger" style="font-size: 1.2rem;"></i>
                     </a>
@@ -73,106 +73,18 @@
 </div>
 
 <script>
-document.addEventListener('DOMContentLoaded', () => {
+    document.addEventListener('DOMContentLoaded', () => {
+        // 1. Видаляємо прапорець зі сховища (бо ми вже побачили нові лайки)
+        localStorage.removeItem('newFavoriteAdded');
 
-    // 1. Знаходимо бейдж лічильника в шапці (за тим ID, що у вашому іншому скрипті)
-    const navbarBadge = document.getElementById('favorite-count');
-
-    // Функція оновлення лічильника в шапці
-    function updateNavbarCount(newCount) {
-        if (navbarBadge) {
-            navbarBadge.textContent = newCount;
-            // Ховаємо, якщо 0, показуємо, якщо більше 0
-            if (newCount > 0) {
-                navbarBadge.classList.remove('d-none');
-            } else {
-                navbarBadge.classList.add('d-none');
-            }
+        // 2. Прибираємо світіння з меню
+        const navLink = document.getElementById('nav-favorites-link');
+        if (navLink) {
+            navLink.classList.remove('favorites-glow');
         }
-    }
 
-    // 2. Обробка кліків по кнопках видалення
-    const removeButtons = document.querySelectorAll('.js-remove-fav');
-
-    removeButtons.forEach(btn => {
-        btn.addEventListener('click', async function(e) {
-            e.preventDefault(); // Зупиняємо білий екран
-
-            const card = this.closest('.card'); // Знаходимо картку
-            const url = this.getAttribute('href');
-
-            // --- А. ОПТИМІСТИЧНЕ ОНОВЛЕННЯ (Миттєва реакція) ---
-
-            // 1. Починаємо анімацію зникнення
-            if (card) {
-                card.style.transition = 'all 0.5s ease';
-                card.style.transform = 'translateX(50px)';
-                card.style.opacity = '0';
-                card.style.pointerEvents = 'none'; // Блокуємо повторні кліки
-            }
-
-            // 2. Миттєво мінусуємо лічильник в шапці (візуально)
-            if (navbarBadge) {
-                let currentCount = parseInt(navbarBadge.textContent) || 0;
-                let optimisticCount = Math.max(0, currentCount - 1);
-                updateNavbarCount(optimisticCount);
-            }
-
-            // --- Б. ЗАПИТ НА СЕРВЕР ---
-            try {
-                const response = await fetch(url, {
-                    method: 'GET',
-                    headers: {
-                        'X-Requested-With': 'XMLHttpRequest',
-                        'Content-Type': 'application/json'
-                    }
-                });
-                const data = await response.json();
-
-                if (data.success) {
-                    // Якщо сервер повернув точну кількість улюблених користувача - оновлюємо
-                    if (data.user_favorites_count !== undefined) {
-                        updateNavbarCount(data.user_favorites_count);
-                    }
-
-                    // 3. Фізичне видалення картки
-                    setTimeout(() => {
-                        if (card) card.remove();
-
-                        // Перевірка: чи лишились ще картки?
-                        // Якщо це була остання картка, перезавантажуємо сторінку,
-                        // щоб Django показав блок "Список порожній"
-                        const remainingCards = document.querySelectorAll('.js-remove-fav');
-                        // Важливо перевіряти мінус та, яку ми щойно приховали
-                        const visibleCards = Array.from(remainingCards).filter(c => c.closest('.card').style.opacity !== '0');
-
-                        if (visibleCards.length === 0) {
-                            window.location.reload();
-                        }
-                    }, 500);
-                } else {
-                    // Якщо помилка (data.success = false), повертаємо все назад
-                    console.error('Помилка видалення');
-                    if (card) {
-                        card.style.opacity = '1';
-                        card.style.transform = 'none';
-                    }
-                    // Повертаємо лічильник (+1)
-                    if (navbarBadge) {
-                         let current = parseInt(navbarBadge.textContent) || 0;
-                         updateNavbarCount(current + 1);
-                    }
-                }
-            } catch (error) {
-                console.error('Помилка мережі:', error);
-                // Відкат змін при помилці
-                if (card) {
-                    card.style.opacity = '1';
-                    card.style.transform = 'none';
-                }
-            }
-        });
+        // 3. Оновлюємо лічильник в меню (якщо ми видалили щось, цифра має змінитись,
+        // але тут краще просто сховати бейдж, якщо список пустий, або залишити як є до перезавантаження)
     });
-});
 </script>
 {% endblock %}
