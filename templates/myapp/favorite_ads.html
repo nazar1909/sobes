@@ -73,57 +73,106 @@
 </div>
 
 <script>
-    document.addEventListener('DOMContentLoaded', () => {
-        // --- ВАША СТАРА ЛОГІКА ---
-        localStorage.removeItem('newFavoriteAdded');
-        const navLink = document.getElementById('nav-favorites-link');
-        if (navLink) {
-            navLink.classList.remove('favorites-glow');
+document.addEventListener('DOMContentLoaded', () => {
+
+    // 1. Знаходимо бейдж лічильника в шапці (за тим ID, що у вашому іншому скрипті)
+    const navbarBadge = document.getElementById('favorite-count');
+
+    // Функція оновлення лічильника в шапці
+    function updateNavbarCount(newCount) {
+        if (navbarBadge) {
+            navbarBadge.textContent = newCount;
+            // Ховаємо, якщо 0, показуємо, якщо більше 0
+            if (newCount > 0) {
+                navbarBadge.classList.remove('d-none');
+            } else {
+                navbarBadge.classList.add('d-none');
+            }
         }
+    }
 
-        // --- НОВА ЛОГІКА ДЛЯ ВИДАЛЕННЯ ---
-        const removeButtons = document.querySelectorAll('.js-remove-fav');
+    // 2. Обробка кліків по кнопках видалення
+    const removeButtons = document.querySelectorAll('.js-remove-fav');
 
-        removeButtons.forEach(btn => {
-            btn.addEventListener('click', function(e) {
-                e.preventDefault(); // 1. Блокуємо перехід на білу сторінку JSON
+    removeButtons.forEach(btn => {
+        btn.addEventListener('click', async function(e) {
+            e.preventDefault(); // Зупиняємо білий екран
 
-                const url = this.getAttribute('href');
-                const card = this.closest('.card'); // Знаходимо всю картку товару
+            const card = this.closest('.card'); // Знаходимо картку
+            const url = this.getAttribute('href');
 
-                // 2. Відправляємо запит
-                fetch(url, {
+            // --- А. ОПТИМІСТИЧНЕ ОНОВЛЕННЯ (Миттєва реакція) ---
+
+            // 1. Починаємо анімацію зникнення
+            if (card) {
+                card.style.transition = 'all 0.5s ease';
+                card.style.transform = 'translateX(50px)';
+                card.style.opacity = '0';
+                card.style.pointerEvents = 'none'; // Блокуємо повторні кліки
+            }
+
+            // 2. Миттєво мінусуємо лічильник в шапці (візуально)
+            if (navbarBadge) {
+                let currentCount = parseInt(navbarBadge.textContent) || 0;
+                let optimisticCount = Math.max(0, currentCount - 1);
+                updateNavbarCount(optimisticCount);
+            }
+
+            // --- Б. ЗАПИТ НА СЕРВЕР ---
+            try {
+                const response = await fetch(url, {
                     method: 'GET',
                     headers: {
                         'X-Requested-With': 'XMLHttpRequest',
                         'Content-Type': 'application/json'
                     }
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        // 3. Анімація зникнення
-                        if (card) {
-                            card.style.transition = 'all 0.5s ease';
-                            card.style.transform = 'translateX(100px)'; // Зсув вправо
-                            card.style.opacity = '0'; // Зникання
+                });
+                const data = await response.json();
 
-                            setTimeout(() => {
-                                card.remove(); // Фізичне видалення з HTML
-
-                                // Перевірка: якщо карток більше немає, перезавантажуємо сторінку,
-                                // щоб показати блок "Список порожній" (який генерує Django)
-                                const remainingCards = document.querySelectorAll('.js-remove-fav');
-                                if (remainingCards.length === 0) {
-                                    window.location.reload();
-                                }
-                            }, 500);
-                        }
+                if (data.success) {
+                    // Якщо сервер повернув точну кількість улюблених користувача - оновлюємо
+                    if (data.user_favorites_count !== undefined) {
+                        updateNavbarCount(data.user_favorites_count);
                     }
-                })
-                .catch(err => console.error('Помилка:', err));
-            });
+
+                    // 3. Фізичне видалення картки
+                    setTimeout(() => {
+                        if (card) card.remove();
+
+                        // Перевірка: чи лишились ще картки?
+                        // Якщо це була остання картка, перезавантажуємо сторінку,
+                        // щоб Django показав блок "Список порожній"
+                        const remainingCards = document.querySelectorAll('.js-remove-fav');
+                        // Важливо перевіряти мінус та, яку ми щойно приховали
+                        const visibleCards = Array.from(remainingCards).filter(c => c.closest('.card').style.opacity !== '0');
+
+                        if (visibleCards.length === 0) {
+                            window.location.reload();
+                        }
+                    }, 500);
+                } else {
+                    // Якщо помилка (data.success = false), повертаємо все назад
+                    console.error('Помилка видалення');
+                    if (card) {
+                        card.style.opacity = '1';
+                        card.style.transform = 'none';
+                    }
+                    // Повертаємо лічильник (+1)
+                    if (navbarBadge) {
+                         let current = parseInt(navbarBadge.textContent) || 0;
+                         updateNavbarCount(current + 1);
+                    }
+                }
+            } catch (error) {
+                console.error('Помилка мережі:', error);
+                // Відкат змін при помилці
+                if (card) {
+                    card.style.opacity = '1';
+                    card.style.transform = 'none';
+                }
+            }
         });
     });
+});
 </script>
 {% endblock %}
