@@ -531,10 +531,18 @@ def chat_list(request):
     )
 
     # 3. Розділення на списки (залишаємо як було)
+    # 5. Розділення на прочитані/непрочитані
     unread_chats_list = []
     read_chats_list = []
 
     for chat in all_user_chats:
+        # [!!!] ЗАЛІЗОБЕТОННИЙ ФІЛЬТР [!!!]
+        # Якщо база не повернула час останнього повідомлення — значить повідомлень немає.
+        # Ми просто пропускаємо цей крок циклу ("continue"), і чат не потрапляє в список.
+        if chat.last_message_time is None:
+            continue
+
+        # Знаходимо співрозмовника (того, хто не я)
         others = [p for p in chat.participants.all() if p != request.user]
         chat.other_user = others[0] if others else None
 
@@ -549,7 +557,6 @@ def chat_list(request):
     }
 
     return render(request, 'myapp/chat_list.html', context)
-
 @login_required
 def chat_detail(request, chat_id):
     chat_room = get_object_or_404(ChatRoom, id=chat_id)
