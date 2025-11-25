@@ -52,14 +52,24 @@ body.d-flex {
   flex-shrink: 0;
   background-color: var(--brand-dark);
   color: var(--text-light);
-  height: 100vh;
-  position: relative;
-  z-index: 20; /* < (z-index залишається тут, це правильно) */
 
-  /* [!!!] ДОДАЙТЕ ЦЕ [!!!] */
-  /* Це змусить .profile-dropdown "прилипнути" до низу */
+  /* --- ВИПРАВЛЕННЯ ВИСОТИ --- */
+  height: 100vh;      /* Для старих браузерів */
+  height: 100dvh;     /* [ВАЖЛИВО] Враховує динамічні панелі на iPhone */
+
+  /* --- ПОЗИЦІОНУВАННЯ --- */
+  position: fixed;    /* Краще fixed, щоб меню завжди було видно при скролі сторінки */
+  top: 0;
+  left: 0;
+  z-index: 20;
+
+  /* --- ГНУЧКІСТЬ --- */
   display: flex;
   flex-direction: column;
+
+  /* --- [!!!] ГОЛОВНЕ ВИПРАВЛЕННЯ [!!!] --- */
+  overflow-y: auto;   /* Додає прокрутку, якщо кнопки не влазять */
+  padding-bottom: 10px; /* Додатковий відступ знизу, щоб зручно натискати останню кнопку */
 }
 .sidebar-content-wrapper {
   /* Займає весь вільний простір */
