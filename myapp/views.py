@@ -513,21 +513,18 @@ def chat_list(request):
     )
 
     # 2. ГОЛОВНИЙ ЗАПИТ
+    # 4. ГОЛОВНИЙ ЗАПИТ
     all_user_chats = ChatRoom.objects.filter(
-        participants=request.user
-    ).select_related(
+        participants=request.user,
+        messages__isnull=False  # <--- 1. ВІДСІЮЄМО ПУСТІ (немає записів у messages)
+    ).distinct().select_related(  # <--- 2. ПРИБИРАЄМО ДУБЛІ (обов'язково!)
         'ad'
     ).prefetch_related(
         'participants__profile'
     ).annotate(
-        # Спочатку обчислюємо всі дані
         has_unread_messages=Exists(unread_subquery),
         last_message_time=Subquery(last_message_sq.values('timestamp')[:1]),
         last_message_text=last_message_content_sq
-    ).filter(
-        # [!!!] ГОЛОВНА ЗМІНА ТУТ [!!!]
-        # Ми кажемо: залиш тільки ті чати, де час останнього повідомлення НЕ пустий.
-        last_message_time__isnull=False
     ).order_by(
         F('has_unread_messages').desc(),
         F('last_message_time').desc(nulls_last=True)
