@@ -168,28 +168,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // === 2. ВІДНОВЛЕННЯ СТАНУ (SessionStorage) ===
-    function restoreState() {
-        document.querySelectorAll('.card').forEach(card => {
-            const adId = card.getAttribute('data-ad-id');
-            if (!adId) return;
 
-            const savedLikeState = sessionStorage.getItem(`ad_liked_${adId}`);
-            if (savedLikeState !== null) {
-                const isLiked = (savedLikeState === 'true');
-                const countSpan = card.querySelector('.favorite-count');
-                let currentCount = parseInt(countSpan.textContent.replace(/\D/g, '')) || 0;
-
-                // Візуальна корекція, якщо лайк є, а цифра 0
-                if (isLiked && currentCount === 0) {
-                    updateLikeUI(card, true, 1);
-                } else {
-                    updateLikeUI(card, isLiked, currentCount);
-                }
-            }
-        });
-    }
-    restoreState();
 
     // === 3. ГОЛОВНА ЛОГІКА КЛІКУ (ОДИН РАЗ!) ===
     document.querySelectorAll('.favorite-icon').forEach(button => {
