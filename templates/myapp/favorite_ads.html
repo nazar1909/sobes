@@ -48,8 +48,9 @@
                                     </p>
                                 </div>
 
-                            </div> </div> </div> <a href="{% url 'toggle_favorite' ad.slug %}"
-                       class="position-absolute top-0 end-0 m-3 btn btn-light rounded-circle shadow-sm d-flex align-items-center justify-content-center"
+                            </div> </div> </div>
+                    <a href="{% url 'toggle_favorite' ad.slug %}"
+                       class="js-remove-fav position-absolute top-0 end-0 m-3 btn btn-light rounded-circle shadow-sm d-flex align-items-center justify-content-center"
                        style="width: 40px; height: 40px; z-index: 2;">
                         <i class="fa-solid fa-heart text-danger" style="font-size: 1.2rem;"></i>
                     </a>
@@ -73,17 +74,56 @@
 
 <script>
     document.addEventListener('DOMContentLoaded', () => {
-        // 1. Видаляємо прапорець зі сховища (бо ми вже побачили нові лайки)
+        // --- ВАША СТАРА ЛОГІКА ---
         localStorage.removeItem('newFavoriteAdded');
-
-        // 2. Прибираємо світіння з меню
         const navLink = document.getElementById('nav-favorites-link');
         if (navLink) {
             navLink.classList.remove('favorites-glow');
         }
 
-        // 3. Оновлюємо лічильник в меню (якщо ми видалили щось, цифра має змінитись,
-        // але тут краще просто сховати бейдж, якщо список пустий, або залишити як є до перезавантаження)
+        // --- НОВА ЛОГІКА ДЛЯ ВИДАЛЕННЯ ---
+        const removeButtons = document.querySelectorAll('.js-remove-fav');
+
+        removeButtons.forEach(btn => {
+            btn.addEventListener('click', function(e) {
+                e.preventDefault(); // 1. Блокуємо перехід на білу сторінку JSON
+
+                const url = this.getAttribute('href');
+                const card = this.closest('.card'); // Знаходимо всю картку товару
+
+                // 2. Відправляємо запит
+                fetch(url, {
+                    method: 'GET',
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'Content-Type': 'application/json'
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // 3. Анімація зникнення
+                        if (card) {
+                            card.style.transition = 'all 0.5s ease';
+                            card.style.transform = 'translateX(100px)'; // Зсув вправо
+                            card.style.opacity = '0'; // Зникання
+
+                            setTimeout(() => {
+                                card.remove(); // Фізичне видалення з HTML
+
+                                // Перевірка: якщо карток більше немає, перезавантажуємо сторінку,
+                                // щоб показати блок "Список порожній" (який генерує Django)
+                                const remainingCards = document.querySelectorAll('.js-remove-fav');
+                                if (remainingCards.length === 0) {
+                                    window.location.reload();
+                                }
+                            }, 500);
+                        }
+                    }
+                })
+                .catch(err => console.error('Помилка:', err));
+            });
+        });
     });
 </script>
 {% endblock %}
