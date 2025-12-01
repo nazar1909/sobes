@@ -125,7 +125,7 @@ body.d-flex {
   flex-grow: 1;
   padding: 2rem;
   background-color: var(--bg-light);
-  width: calc(100% - 190px);
+  width: auto;
   /* ВИПРАВЛЕНО: Додано висоту */
 }
 
@@ -967,7 +967,7 @@ html, body {
     position: relative !important;
     bottom: auto !important;
     z-index: 10;
-    width: calc(100% - 190px); /* Спочатку на всю ширину */
+    width: auto; /* Спочатку на всю ширину */
     flex-shrink: 0;
 
     /* Магія: відсуваємо контент футера, щоб не ліз під меню */
@@ -977,10 +977,12 @@ html, body {
 
 /* Адаптив для футера */
 @media (max-width: 768px) {
-    .page-footer {
-        padding-left: 0;
+    margin-left: 0 !important;
+    width: 100% !important;
+    padding-left: 15px; /* Стандартний відступ для мобілок */
+    padding-right: 15px;
     }
-}
+
 
 .footer-logo {
     width: 100px;
