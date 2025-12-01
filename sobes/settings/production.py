@@ -1,28 +1,20 @@
 import os
 import dj_database_url
-from .base import * # Імпортуємо всі налаштування з base.py
-
-print("🚀 Running in PRODUCTION mode (HTTP/IP Fix)")
+from .base import *
 
 DEBUG = False
 
 # ==========================================
 # 1. ALLOWED HOSTS
 # ==========================================
-allowed_hosts_env = os.getenv("ALLOWED_HOSTS", "localhost,127.0.0.1")
-ALLOWED_HOSTS = allowed_hosts_env.split(",")
-
-# Додаємо ваш IP та домен вручну
-if "193.56.151.227" not in ALLOWED_HOSTS:
-    ALLOWED_HOSTS.append("193.56.151.227")
-if "sobes-prod-production.up.railway.app" not in ALLOWED_HOSTS:
-    ALLOWED_HOSTS.append("sobes-prod-production.up.railway.app")
-
+ALLOWED_HOSTS = ["127.0.0.1", "localhost", "193.56.151.227", "sobes-prod-production.up.railway.app", "*"]
 
 # ==========================================
 # 2. DATABASE (PostgreSQL)
 # ==========================================
+# Беремо з Env, але якщо немає — ставимо локальні налаштування
 database_url = os.environ.get('DATABASE_URL')
+
 if database_url:
     DATABASES = {
         'default': dj_database_url.config(
@@ -31,71 +23,70 @@ if database_url:
             ssl_require=False
         )
     }
-
-# ==========================================
-# 3. CACHE & REDIS
-# ==========================================
-redis_url = os.getenv("REDIS_URL")
-if redis_url:
-    CACHES = {
-        "default": {
-            "BACKEND": "django_redis.cache.RedisCache",
-            "LOCATION": redis_url,
-            "OPTIONS": {"CLIENT_CLASS": "django_redis.client.DefaultClient"},
-        }
-    }
-    CHANNEL_LAYERS = {
-        "default": {
-            "BACKEND": "channels_redis.core.RedisChannelLayer",
-            "CONFIG": {
-                "hosts": [redis_url],
-            },
-        },
-    }
 else:
-    CACHES = {
+    # Фолбек для локальної бази, якщо змінна злетіла
+    DATABASES = {
         'default': {
-            'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
-            'LOCATION': 'unique-snowflake',
-        }
-    }
-    CHANNEL_LAYERS = {
-        "default": {
-            "BACKEND": "channels.layers.InMemoryChannelLayer"
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': 'sobes',
+            'USER': 'postgres',
+            'PASSWORD': '12345678', # Твій пароль
+            'HOST': '127.0.0.1',
+            'PORT': '5432',
         }
     }
 
 # ==========================================
-# 4. CELERY
+# 3. CACHE & REDIS (WebSockets)
 # ==========================================
-CELERY_BROKER_URL = f"amqp://{os.getenv('RABBITMQ_DEFAULT_USER', 'guest')}:{os.getenv('RABBITMQ_DEFAULT_PASS', 'guest')}@{os.getenv('RABBITMQ_HOST', 'rabbitmq')}:5672//"
-CELERY_RESULT_BACKEND = redis_url if redis_url else "django-db"
+# 🔥 ЖОРСТКО ВКАЗУЄМО 127.0.0.1, ЩОБ ТОЧНО ПРАЦЮВАЛО
+REDIS_HOST = '127.0.0.1'
+REDIS_PORT = 6379
+
+CACHES = {
+    "default": {
+        "BACKEND": "django_redis.cache.RedisCache",
+        "LOCATION": f"redis://{REDIS_HOST}:{REDIS_PORT}/1",
+        "OPTIONS": {"CLIENT_CLASS": "django_redis.client.DefaultClient"},
+    }
+}
+
+# Налаштування для ЧАТУ (Channels)
+CHANNEL_LAYERS = {
+    'default': {
+        'BACKEND': 'channels_redis.core.RedisChannelLayer',
+        'CONFIG': {
+            "hosts": [(REDIS_HOST, REDIS_PORT)],
+        },
+    },
+}
+
+# ==========================================
+# 4. CELERY (RabbitMQ або Redis)
+# ==========================================
+# Якщо ти встановив RabbitMQ локально:
+CELERY_BROKER_URL = "amqp://guest:guest@127.0.0.1:5672//"
+
+# АБО, якщо RabbitMQ глючить, розкоментуй рядок нижче, щоб юзати Redis (це надійніше):
+# CELERY_BROKER_URL = f"redis://{REDIS_HOST}:{REDIS_PORT}/0"
+
+CELERY_RESULT_BACKEND = f"redis://{REDIS_HOST}:{REDIS_PORT}/0"
 CELERY_TASK_ALWAYS_EAGER = False
 
 # ==========================================
-# 5. SECURITY & HTTP (ВИПРАВЛЕНО)
+# 5. SECURITY & HTTP
 # ==========================================
-
-# ВАЖЛИВО: Оскільки ви використовуєте HTTP (IP-адреса),
-# ми мусимо явно ВИМКНУТИ Secure-флаги, інакше куки не запишуться
-# і тестер "губитиме" сесію.
-
 SECURE_SSL_REDIRECT = False
 SESSION_COOKIE_SECURE = False
 CSRF_COOKIE_SECURE = False
-
-# Це виправить помилку "Cross-Origin-Opener-Policy ... untrustworthy" в консолі
-# Ми вимикаємо цей заголовок, бо він працює тільки на HTTPS
 SECURE_CROSS_ORIGIN_OPENER_POLICY = None
-
-# Якщо ви заходите через проксі (nginx/cloudflare), іноді потрібно це,
-# але для прямого доступу по IP можна залишити закоментованим або налаштувати:
-# SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
 CSRF_TRUSTED_ORIGINS = [
     "http://193.56.151.227",
     "http://193.56.151.227:8000",
+    "http://193.56.151.227:8001",
     "https://sobes-prod-production.up.railway.app",
 ]
 
-print(f"✅ Config loaded. Static Root: {STATIC_ROOT}")
+# Коментуємо, щоб не було помилки, якщо змінна не оголошена вище
+# print(f"✅ Config loaded. Static Root: {STATIC_ROOT}")
