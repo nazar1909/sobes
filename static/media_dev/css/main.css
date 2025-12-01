@@ -985,6 +985,7 @@ html, body {
     width: auto !important; /* Займає всю доступну ширину до кінця екрану */
     flex-shrink: 0;
     box-sizing: border-box;
+    background-color: #b08bb8;
 }
 
 /* Адаптив для футера */
