@@ -40,7 +40,7 @@ from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
 from .models import AD
-
+from .tasks import increment_ad_view
 
 # Create your views here.
 def home(request):

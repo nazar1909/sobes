@@ -15,3 +15,7 @@ def add(x, y):
     result = x + y
     print(f"Завдання виконано: {result}")
     return result
+
+@shared_task
+def increment_ad_view(ad_id):
+    AD.objects.filter(pk=ad_id).update(views=F('views') + 1)
