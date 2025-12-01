@@ -1,27 +1,26 @@
 import os
-import django
 from django.core.asgi import get_asgi_application
 
-# 1. Вказуємо налаштування
+# 1. Встановлюємо налаштування
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'sobes.settings.production')
 
-# 2. Ініціалізуємо Django (завантажуємо додатки)
-django.setup()
-
-# 3. Створюємо HTTP додаток (для звичайних сторінок)
+# 2. 🔥 КРИТИЧНО ВАЖЛИВО: Ініціалізуємо Django ТУТ
+# Це завантажує INSTALLED_APPS і готує моделі.
+# Якщо зробити імпорт нижче до цього рядка — буде помилка.
 django_asgi_app = get_asgi_application()
 
-# 4. ТІЛЬКИ ТЕПЕР імпортуємо Channels і твій роутинг
-# (бо моделі вже готові до використання)
+# 3. Тільки ТЕПЕР імпортуємо Channels і твої маршрути
 from channels.routing import ProtocolTypeRouter, URLRouter
 from channels.auth import AuthMiddlewareStack
-import myapp.routing  # <--- Цей імпорт має бути тут, внизу!
+from channels.security.websocket import AllowedHostsOriginValidator
+from myapp.routing import websocket_urlpatterns
 
+# 4. Збираємо все разом
 application = ProtocolTypeRouter({
     "http": django_asgi_app,
-    "websocket": AuthMiddlewareStack(
-        URLRouter(
-            myapp.routing.websocket_urlpatterns
+    "websocket": AllowedHostsOriginValidator(
+        AuthMiddlewareStack(
+            URLRouter(websocket_urlpatterns)
         )
     ),
 })
