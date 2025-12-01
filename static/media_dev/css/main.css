@@ -125,7 +125,7 @@ body.d-flex {
   flex-grow: 1;
   padding: 2rem;
   background-color: var(--bg-light);
-
+  width: calc(100% - 190px);
   /* ВИПРАВЛЕНО: Додано висоту */
 }
 
@@ -967,7 +967,7 @@ html, body {
     position: relative !important;
     bottom: auto !important;
     z-index: 10;
-    width: 100%; /* Спочатку на всю ширину */
+    width: calc(100% - 190px); /* Спочатку на всю ширину */
     flex-shrink: 0;
 
     /* Магія: відсуваємо контент футера, щоб не ліз під меню */
