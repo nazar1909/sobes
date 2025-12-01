@@ -104,9 +104,13 @@
                 </div>
                 {% else %}
               {% if request.user.is_authenticated %}
-                  <button id="show-chat-btn" class="btn btn-outline-dark w-100 btn-lg mb-3">
-                      <i class="fa-solid fa-comments me-2"></i> Написати продавцю
-                  </button>
+                <button type="button"
+                        id="show-chat-btn"
+                        class="btn btn-outline-dark w-100 btn-lg mb-3"
+                        style="position: relative; z-index: 9999;"
+                        onclick="document.getElementById('chat-wrapper').style.display = 'block'; this.style.display = 'none';">
+                    <i class="fa-solid fa-comments me-2"></i> Написати продавцю (TEST)
+                </button>
               {% else %}
                   <a href="{% url 'login' %}?next={{ request.path }}" class="btn btn-outline-dark w-100 btn-lg mb-3">
                       <i class="fa-solid fa-comments me-2"></i> Увійдіть, щоб написати
