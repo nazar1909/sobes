@@ -1,23 +1,24 @@
 import os
+import django
 from django.core.asgi import get_asgi_application
 
-# 1. Спочатку вказуємо налаштування
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'sobes.settings')
+# 1. Вказуємо налаштування
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'sobes.settings.production')
 
-# 2. ВАЖЛИВО: Ініціалізуємо Django тут.
-# Це завантажить усі додатки та моделі.
+# 2. Ініціалізуємо Django (завантажуємо додатки)
+django.setup()
+
+# 3. Створюємо HTTP додаток (для звичайних сторінок)
 django_asgi_app = get_asgi_application()
 
-# 3. Тільки ТЕПЕР імпортуємо роутинг і канали
-# (бо тепер Django готовий і моделі можна використовувати)
+# 4. ТІЛЬКИ ТЕПЕР імпортуємо Channels і твій роутинг
+# (бо моделі вже готові до використання)
 from channels.routing import ProtocolTypeRouter, URLRouter
 from channels.auth import AuthMiddlewareStack
-import myapp.routing
+import myapp.routing  # <--- Цей імпорт має бути тут, внизу!
 
 application = ProtocolTypeRouter({
-    # Тут використовуємо вже створену змінну
     "http": django_asgi_app,
-
     "websocket": AuthMiddlewareStack(
         URLRouter(
             myapp.routing.websocket_urlpatterns
