@@ -122,11 +122,20 @@ body.d-flex {
    ======================== */
 
 .main-content {
-  flex-grow: 1;
-  padding: 2rem;
-  background-color: var(--bg-light);
-  width: auto;
-  /* ВИПРАВЛЕНО: Додано висоту */
+    /* Використовуємо PADDING замість Margin - це надійніше */
+    padding-left: calc(var(--sidebar-width) + 20px) !important;
+
+    /* Скидаємо Margin */
+    margin-left: 0 !important;
+
+    /* Ширина на весь екран (padding не дасть контенту залізти під меню) */
+    width: 100% !important;
+    max-width: 100% !important;
+
+    /* Важливо для Flexbox */
+    flex-grow: 1;
+    box-sizing: border-box; /* Щоб padding не розширював екран */
+    background-color: var(--bg-light);
 }
 
 /* ========================
