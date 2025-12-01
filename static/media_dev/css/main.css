@@ -976,21 +976,26 @@ html, body {
     position: relative !important;
     bottom: auto !important;
     z-index: 10;
-    width: auto; /* Спочатку на всю ширину */
-    flex-shrink: 0;
 
-    /* Магія: відсуваємо контент футера, щоб не ліз під меню */
-    padding-left: 190px;
-    box-sizing: border-box; /* Щоб padding не розширював екран */
+    /* 🔥 ВИПРАВЛЕННЯ ТУТ 🔥 */
+    /* Ми використовуємо MARGIN, щоб посунути весь блок, а не PADDING */
+    margin-left: 190px !important;
+    padding-left: 0 !important;
+
+    width: auto !important; /* Займає всю доступну ширину до кінця екрану */
+    flex-shrink: 0;
+    box-sizing: border-box;
 }
 
 /* Адаптив для футера */
 @media (max-width: 768px) {
-    margin-left: 0 !important;
-    width: 100% !important;
-    padding-left: 15px; /* Стандартний відступ для мобілок */
-    padding-right: 15px;
+    .page-footer {
+        margin-left: 0 !important; /* На телефонах прибираємо відступ */
+        padding-left: 15px !important;
+        padding-right: 15px !important;
+        width: 100% !important;
     }
+}
 
 
 .footer-logo {
