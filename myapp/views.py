@@ -495,9 +495,11 @@ def chat_list(request):
     last_message_content_sq = Subquery(
         last_message_sq.annotate(
             display_content=Case(
-                When(Q(content__isnull=True) | Q(content__exact=''),
-                     Q(file__isnull=False),
-                     Value('📷 Фото')),
+                When(
+                    # (Немає тексту) І (Є файл)
+                    (Q(content__isnull=True) | Q(content__exact='')) & Q(file__isnull=False),
+                    then=Value('📷 Фото')
+                ),
                 default=F('content'),
                 output_field=CharField()
             )
