@@ -497,7 +497,7 @@ def chat_list(request):
             display_content=Case(
                 When(Q(content__isnull=True) | Q(content__exact=''),
                      Q(file__isnull=False),
-                     then=Value('📷 Фото')),
+                     Value('📷 Фото')),
                 default=F('content'),
                 output_field=CharField()
             )
