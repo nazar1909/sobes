@@ -1,31 +1,26 @@
 import os
+import django # 🔥 ДОДАНО/ПЕРЕМІЩЕНО
 from django.core.asgi import get_asgi_application
 
-# 1. Встановлюємо налаштування (ОБОВ'ЯЗКОВО ПЕРЕД get_asgi_application)
+# 1. Встановлюємо налаштування (ОБОВ'ЯЗКОВО ПЕРШИМ)
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'sobes.settings.production')
 
-# 2. 🔥 КРИТИЧНО: Ініціалізуємо додаток. ЦЕ ЗАВЖДИ ПЕРШЕ.
-# Ми більше не робимо явний import myapp.routing на верхньому рівні!
-django_asgi_app = get_asgi_application()
+# 2. 🔥 ПРИМУСОВА ІНІЦІАЛІЗАЦІЯ 🔥
+# Це гарантує, що INSTALLED_APPS завантажаться до імпорту моделей.
+django.setup()
 
-# 3. Тільки ТЕПЕР робимо імпорти, які залежать від Django
+# 3. Тільки ТЕПЕР імпортуємо WebSockets і роутинг
 from channels.routing import ProtocolTypeRouter, URLRouter
 from channels.auth import AuthMiddlewareStack
 from channels.security.websocket import AllowedHostsOriginValidator
-# from myapp.routing import websocket_urlpatterns  <-- ПРИБИРАЄМО ЗВІДСИ!
+from myapp.routing import websocket_urlpatterns
 
+# 4. Збираємо все разом
 application = ProtocolTypeRouter({
-    "http": django_asgi_app,
+    "http": get_asgi_application(),
     "websocket": AllowedHostsOriginValidator(
         AuthMiddlewareStack(
-            URLRouter(
-                # 🔥 ВАЖЛИВО: Імпортуємо routing.py ТУТ, ЛІНИВО (lazy import)
-                # Це змушує Python імпортувати файл, тільки коли він потрібен.
-                # Він уже пройшов усі перевірки безпеки.
-                [
-                    *__import__('myapp.routing', fromlist=['websocket_urlpatterns']).websocket_urlpatterns
-                ]
-            )
+            URLRouter(websocket_urlpatterns)
         )
     ),
 })
