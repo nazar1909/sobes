@@ -118,7 +118,23 @@
               </a>
           {% endif %}
       {% endif %}
-
+            <div id="chat-wrapper" class="card shadow-sm mb-3 border-0" style="display: none;">
+              <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                  <h6 class="mb-0 fw-bold"><i class="fa-solid fa-comments me-2"></i>Чат з продавцем</h6>
+                  <button id="hide-chat-btn" class="btn btn-sm btn-close"></button>
+              </div>
+              <div class="card-body p-0">
+                  <div id="chat-log" class="chat-bubble-log p-3" style="height: 300px; overflow-y: auto; background: #fff;">
+                      </div>
+                  <div class="input-group p-2 border-top">
+                      <input id="chat-message-input" type="text" class="form-control border-0" placeholder="Напишіть повідомлення...">
+                      <button id="chat-message-submit" class="btn btn-link text-dark">
+                          <i class="fa-solid fa-paper-plane"></i>
+                      </button>
+                  </div>
+              </div>
+          </div>
+      ```
       <div class="card shadow-sm mb-3">
         <div class="card-body">
           <h5 class="card-title h6 mb-3">Способи доставки</h5>
