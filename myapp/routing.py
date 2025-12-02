@@ -1,6 +1,6 @@
 # myapp/routing.py
 from django.urls import re_path
-from . import consumers
+from .consumers import ChatConsumer, NotificationConsumer
 
 websocket_urlpatterns = [
     # 1. Маршрут для ЧАТУ (для конкретної кімнати)
