@@ -90,3 +90,4 @@ CSRF_TRUSTED_ORIGINS = [
 
 # Коментуємо, щоб не було помилки, якщо змінна не оголошена вище
 # print(f"✅ Config loaded. Static Root: {STATIC_ROOT}")
+ROOT_URLCONF = 'sobes.urls'
