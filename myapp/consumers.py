@@ -3,7 +3,6 @@ from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.db import database_sync_to_async
 from django.contrib.auth import get_user_model
 
-User = get_user_model()
 
 
 class ChatConsumer(AsyncWebsocketConsumer):
@@ -42,7 +41,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
     def get_or_create_room(self):
         from .models import AD, ChatRoom  # локальний імпорт
         ad = AD.objects.get(id=self.ad_id)
-        buyer = User.objects.get(id=self.buyer_id)
+        buyer =  get_user_model().objects.get(id=self.buyer_id)
 
         chat = ChatRoom.objects.filter(ad=ad, participants=buyer).first()
         if not chat:
