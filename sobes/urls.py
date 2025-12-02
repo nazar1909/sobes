@@ -1,6 +1,5 @@
 from django.contrib import admin
 from django.urls import path, include
-from myapp import views # Імпорт views
 # Явно імпортуємо функції скидання пароля, якщо вони у views.py
 from myapp.views import password_reset, password_reset_done_view, password_reset_confirm_view, chat_list
 
