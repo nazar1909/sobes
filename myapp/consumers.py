@@ -154,3 +154,21 @@ class ChatConsumer(AsyncWebsocketConsumer):
             'username': event['username'],
             'avatar_url': event['avatar_url']
         }))
+class NotificationConsumer(AsyncWebsocketConsumer):
+    async def connect(self):
+        user_id = self.scope['user'].id
+        self.room_group_name = f'user_{user_id}_notifications'
+        await self.channel_layer.group_add(self.room_group_name, self.channel_name)
+        await self.accept()
+
+    async def disconnect(self, close_code):
+        await self.channel_layer.group_discard(self.room_group_name, self.channel_name)
+
+    async def chat_notification(self, event):
+        # Пересилка сповіщення клієнту
+        await self.send(text_data=json.dumps({
+            'type': 'new_notification',
+            'message': event['message'],
+            'sender': event['sender'],
+            'content': event['content']
+        }))
