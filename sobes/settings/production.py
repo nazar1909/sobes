@@ -62,7 +62,7 @@ INSTALLED_APPS = [
 # ==========================================
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
-    # 'whitenoise.middleware.WhiteNoiseMiddleware', # Вимкнено для Nginx
+    'whitenoise.middleware.WhiteNoiseMiddleware', # Вимкнено для Nginx
     'django.contrib.sessions.middleware.SessionMiddleware',
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -162,8 +162,7 @@ STATICFILES_DIRS = [
 ]
 
 # Важливо: Статику - локально, Медіа - в хмару
-STATICFILES_STORAGE = 'django.contrib.staticfiles.storage.StaticFilesStorage'
-
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 # Cloudinary налаштування (залишаємо як є)
 CLOUDINARY_URL = os.environ.get('CLOUDINARY_URL')
 if not CLOUDINARY_URL:
