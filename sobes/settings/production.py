@@ -3,7 +3,7 @@ from pathlib import Path
 import dj_database_url
 from django.core.exceptions import ImproperlyConfigured
 from dotenv import load_dotenv
-
+import cloudinary
 # ==========================================
 # 1. ОСНОВНІ ШЛЯХИ ТА ЗМІННІ
 # ==========================================
@@ -172,6 +172,12 @@ if not CLOUDINARY_URL:
         'API_KEY': '633531725433543',
         'API_SECRET': '1U31LQvhjYxWljoN8tBIx-i36hI'
     }
+    cloudinary.config(
+        cloud_name=CLOUDINARY_STORAGE['CLOUD_NAME'],
+        api_key=CLOUDINARY_STORAGE['API_KEY'],
+        api_secret=CLOUDINARY_STORAGE['API_SECRET'],
+        secure=True
+    )
 DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
