@@ -21,7 +21,7 @@ def bool_env(name, default=False):
 # 2. БЕЗПЕКА
 # ==========================================
 SECRET_KEY = get_env_variable("SECRET_KEY", "django-insecure-production-key-change-me")
-DEBUG = True
+DEBUG = False
 
 ALLOWED_HOSTS = ["127.0.0.1", "localhost", "193.56.151.227", "sobes-prod-production.up.railway.app", "*"]
 
@@ -61,7 +61,7 @@ INSTALLED_APPS = [
 # ==========================================
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
-    'whitenoise.middleware.WhiteNoiseMiddleware', # Вимкнено для Nginx
+    #'whitenoise.middleware.WhiteNoiseMiddleware', # Вимкнено для Nginx
     'django.contrib.sessions.middleware.SessionMiddleware',
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -161,8 +161,7 @@ STATICFILES_DIRS = [
 ]
 
 # Важливо: Статику - локально, Медіа - в хмару
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedStaticFilesStorage'
-
+STATICFILES_STORAGE = 'django.contrib.staticfiles.storage.StaticFilesStorage'
 # Cloudinary налаштування (залишаємо як є)
 CLOUDINARY_URL = os.environ.get('CLOUDINARY_URL')
 if not CLOUDINARY_URL:
