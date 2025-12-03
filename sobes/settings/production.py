@@ -148,11 +148,23 @@ CELERY_TASK_ALWAYS_EAGER = False
 # ==========================================
 # 7. СТАТИКА І МЕДІА
 # ==========================================
+# ==========================================
+# 7. СТАТИКА (ВИПРАВЛЕНО)
+# ==========================================
 STATIC_URL = '/static/'
-STATIC_ROOT = BASE_DIR / 'staticfiles'
-STATICFILES_DIRS = [BASE_DIR / 'static']
+
+# Куди збирати файли (для Nginx)
+STATIC_ROOT = '/home/user/sobes/staticfiles'
+
+# Звідки брати файли (твоя папка з CSS)
+STATICFILES_DIRS = [
+    '/home/user/sobes/static',
+]
+
+# Важливо: Статику - локально, Медіа - в хмару
 STATICFILES_STORAGE = 'django.contrib.staticfiles.storage.StaticFilesStorage'
 
+# Cloudinary налаштування (залишаємо як є)
 CLOUDINARY_URL = os.environ.get('CLOUDINARY_URL')
 if not CLOUDINARY_URL:
     CLOUDINARY_STORAGE = {
@@ -162,8 +174,7 @@ if not CLOUDINARY_URL:
     }
 DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
 MEDIA_URL = '/media/'
-MEDIA_ROOT = BASE_DIR / 'media'
-
+MEDIA_ROOT = '/home/user/sobes/media'
 # ==========================================
 # 8. ІНШЕ
 # ==========================================
