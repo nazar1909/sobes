@@ -3,9 +3,7 @@ import os
 from django.core.exceptions import ImproperlyConfigured
 from distutils.util import strtobool
 from dotenv import load_dotenv
-import cloudinary
-import cloudinary.uploader
-import cloudinary.api
+
 
 # Завантаження змінних
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
