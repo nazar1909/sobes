@@ -154,11 +154,11 @@ CELERY_TASK_ALWAYS_EAGER = False
 STATIC_URL = '/static/'
 
 # Куди збирати файли (для Nginx)
-STATIC_ROOT = '/home/user/sobes/staticfiles'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 # Звідки брати файли (твоя папка з CSS)
 STATICFILES_DIRS = [
-    '/home/user/sobes/static',
+    BASE_DIR / 'static',
 ]
 
 # Важливо: Статику - локально, Медіа - в хмару
@@ -173,7 +173,8 @@ if not CLOUDINARY_URL:
     }
 DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
 MEDIA_URL = '/media/'
-MEDIA_ROOT = '/home/user/sobes/media'
+MEDIA_ROOT = BASE_DIR / 'media'
+
 # ==========================================
 # 8. ІНШЕ
 # ==========================================
