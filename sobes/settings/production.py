@@ -52,7 +52,7 @@ INSTALLED_APPS = [
     'widget_tweaks',
     'wait_for_db_app',
     'django_celery_results',
-    'cloudinary',
+    #'cloudinary',
     'rest_framework',
     'drf_spectacular',
 ]
