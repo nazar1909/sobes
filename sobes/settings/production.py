@@ -22,7 +22,7 @@ def bool_env(name, default=False):
 # 2. БЕЗПЕКА
 # ==========================================
 SECRET_KEY = get_env_variable("SECRET_KEY", "django-insecure-production-key-change-me")
-DEBUG = False
+DEBUG = True
 
 ALLOWED_HOSTS = ["127.0.0.1", "localhost", "193.56.151.227", "sobes-prod-production.up.railway.app", "*"]
 
