@@ -162,7 +162,8 @@ STATICFILES_DIRS = [
 ]
 
 # Важливо: Статику - локально, Медіа - в хмару
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedStaticFilesStorage'
+
 # Cloudinary налаштування (залишаємо як є)
 CLOUDINARY_URL = os.environ.get('CLOUDINARY_URL')
 if not CLOUDINARY_URL:
