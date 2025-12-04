@@ -4,7 +4,7 @@
 {% block content %}
 <script id="chat-script"
         data-chat-id="{{ room_name_json }}"
-        data-user-avatar="{% if request.user.profile.image %}{{ request.user.profile.image.url }}{% else %}{% static 'images/placeholder.png' %}{% endif %}"
+        data-user-avatar="{% if request.user.profile.image %}{{ request.user.profile.image.url }}{% else %}https://res.cloudinary.com/dhact88gj/image/upload/xoe34jkbrrv8lr7mfpk8{% endif %}"
         defer>
     // Сюди буде вставлений ваш JavaScript
 </script>
@@ -201,7 +201,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // Дані іншого юзера
     const otherUser = {
         username: "{{ other_user.username }}",
-        avatar: "{% if other_user.profile.image %}{{ other_user.profile.image.url }}{% else %}{% static 'images/placeholder.png' %}{% endif %}",
+        avatar: "{% if other_user.profile.image %}{{ other_user.profile.image.url }}{% else %}https://res.cloudinary.com/dhact88gj/image/upload/xoe34jkbrrv8lr7mfpk8{% endif %}",
         bio: "{{ other_user.profile.bio|default:'' }}",
         phone: "{{ other_user.profile.phone|default:'' }}",
         url: "{% url 'public_profile' username=other_user.username %}"
