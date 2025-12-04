@@ -109,24 +109,16 @@ ASGI_APPLICATION = 'sobes.asgi.application'
 # ==========================================
 # 5. БАЗА ДАНИХ
 # ==========================================
-database_url = os.environ.get('DATABASE_URL')
-
-if database_url:
-    DATABASES = {
-        'default': dj_database_url.config(default=database_url, conn_max_age=600, ssl_require=False)
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'sobes',           # Назва бази
+        'USER': 'postgres',      # Користувач (з .env)
+        'PASSWORD': '12345678', # Пароль (з .env)
+        'HOST': '127.0.0.1',       # Або 127.0.0.1
+        'PORT': '5432',
     }
-else:
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.postgresql',
-            'NAME': 'sobes',
-            'USER': 'postgres',
-            'PASSWORD': '12345678',
-            'HOST': '127.0.0.1',
-            'PORT': '5432',
-        }
-    }
-
+}
 # ==========================================
 # 6. REDIS (Channels & Celery)
 # ==========================================
