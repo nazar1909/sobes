@@ -92,8 +92,12 @@ class ChatConsumer(AsyncWebsocketConsumer):
         )
 
     async def connect(self):
+        from django.conf import settings
+        print(f"DEBUG: SECRET_KEY start: {settings.SECRET_KEY[:5]}...")
+        print(f"DEBUG: DB Name: {settings.DATABASES['default']['NAME']}")
+        print(f"DEBUG: DB Host: {settings.DATABASES['default']['HOST']}")
         self.user = self.scope['user']
-
+        print(f"DEBUG: User found: {self.user} (Is Auth: {self.user.is_authenticated})")
         # 1. Перевірка авторизації
         if not self.user.is_authenticated:
             await self.close()
