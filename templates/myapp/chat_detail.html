@@ -181,16 +181,13 @@ document.addEventListener("DOMContentLoaded", () => {
     // 0. ГОЛОВНІ ЗМІННІ
     // ============================================================
     const scriptTag = document.getElementById("chat-script");
-    const chatId = scriptTag.dataset.chatId;
+    const chatId = scriptTag.dataset.chatId; // Тут має бути "1-4"
     const userAvatar = scriptTag.dataset.userAvatar;
 
     const messageList = document.getElementById("message-list");
     const messageForm = document.getElementById("message-form");
     const messageInput = document.getElementById("message-input");
     const sendButton = document.querySelector(".send-btn");
-    const csrf = document.querySelector("input[name='csrfmiddlewaretoken']").value;
-
-    // ЗМІННІ ДЛЯ ФАЙЛІВ ТА ГОЛОСУ ВИДАЛЕНО
 
     // Дані юзера
     const currentUser = {
@@ -210,78 +207,215 @@ document.addEventListener("DOMContentLoaded", () => {
         url: "{% url 'public_profile' username=other_user.username %}"
     };
 
+    // ============================================================
+    // 🚀 1. WEBSOCKET ПІДКЛЮЧЕННЯ (DAPHNE)
+    // ============================================================
+    const wsProtocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
+    const chatSocket = new WebSocket(wsProtocol + window.location.host + '/ws/chat/' + chatId + '/');
+
+    chatSocket.onopen = function(e) {
+        console.log("✅ Chat Socket Connected to room:", chatId);
+    };
+
+    chatSocket.onclose = function(e) {
+        console.error("⚠️ Chat Socket Closed", e);
+    };
+
+    // 📩 ОБРОБКА ВХІДНИХ ПОВІДОМЛЕНЬ
+    chatSocket.onmessage = function(e) {
+        const data = JSON.parse(e.data);
+
+        // A. Історія повідомлень (приходить при підключенні)
+        if (data.type === 'chat_history' && data.messages) {
+            messageList.innerHTML = ''; // Чистимо список
+            data.messages.forEach(msg => {
+                const isMe = msg.username === currentUser.username;
+                const msgData = {
+                    id: Date.now() + Math.random(),
+                    is_me: isMe,
+                    sender: msg.username,
+                    avatar: msg.avatar_url,
+                    content: msg.message,
+                    timestamp: msg.timestamp,
+                    // Додаткові поля для попапу
+                    bio: isMe ? currentUser.bio : otherUser.bio,
+                    phone: isMe ? currentUser.phone : otherUser.phone,
+                    profile_url: isMe ? currentUser.url : otherUser.url
+                };
+                if (isMe) appendSentMessage(msgData);
+                else appendIncomingMessage(msgData);
+            });
+            scrollToBottom();
+        }
+
+        // B. Нове повідомлення
+        else if (data.type === 'new_message' || (data.message && data.username)) {
+            const isMe = data.username === currentUser.username;
+
+            // Якщо це повідомлення від мене - ми його вже намалювали (оптимістично),
+            // тому малюємо тільки якщо це ЧУЖЕ повідомлення.
+            if (!isMe) {
+                const msgData = {
+                    id: Date.now(),
+                    is_me: false,
+                    sender: data.username,
+                    avatar: data.avatar_url || otherUser.avatar,
+                    content: data.message,
+                    timestamp: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
+                    bio: otherUser.bio,
+                    phone: otherUser.phone,
+                    profile_url: otherUser.url
+                };
+                appendIncomingMessage(msgData);
+            }
+        }
+    };
 
     // ============================================================
-    // 0.5. ФУНКЦІЯ Скролу в кінець
+    // 📤 2. ВІДПРАВКА ПОВІДОМЛЕННЯ (ЧЕРЕЗ СОКЕТ)
     // ============================================================
+    if (messageForm) {
+        messageForm.addEventListener("submit", e => {
+            e.preventDefault();
+            const text = messageInput.value.trim();
+            if (!text) return;
+
+            if (chatSocket.readyState === WebSocket.OPEN) {
+                // 1. Відправляємо на сервер
+                chatSocket.send(JSON.stringify({
+                    'message': text
+                }));
+
+                // 2. Малюємо у себе миттєво (Optimistic UI)
+                appendSentMessage({
+                    id: Date.now(),
+                    content: text,
+                    timestamp: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
+                });
+
+                // 3. Чистимо поле
+                messageInput.value = "";
+                updateMessageInputHeight();
+            } else {
+                console.error("Socket is not open");
+                alert("З'єднання втрачено. Оновіть сторінку.");
+            }
+        });
+    }
+
+    // ============================================================
+    // 3. ДОПОМІЖНІ ФУНКЦІЇ UI (Твій код)
+    // ============================================================
+
     function scrollToBottom() {
         messageList.scrollTop = messageList.scrollHeight;
     }
 
+    function updateMessageInputHeight() {
+        messageInput.style.height = 'auto';
+        messageInput.style.height = (messageInput.scrollHeight) + 'px';
+        messageInput.style.paddingTop = "8px";
+    }
 
-// ============================================================
-// 1. ФУНКЦІЯ ДОДАВАННЯ ПОВІДОМЛЕНЬ (ВІД СЕБЕ)
-// ============================================================
-function appendSentMessage(data) {
+    messageInput.addEventListener('input', updateMessageInputHeight);
 
-    // 1. Створюємо контейнер для рядка
-    const row = document.createElement("div");
-    row.className = "message-row sent";
+    // Обробка Enter
+    messageInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            if (e.shiftKey || e.ctrlKey) return;
+            e.preventDefault();
+            if (messageInput.value.trim().length > 0) {
+                messageForm.dispatchEvent(new Event('submit'));
+            }
+        }
+    });
 
-    // 🔥 ВАЖЛИВО: Додаємо ID, щоб скрипт оновлення (polling) бачив,
-    // що це повідомлення вже є на екрані, і не додавав його вдруге.
-    if (data.id) {
+    // --- ФУНКЦІЯ МАЛЮВАННЯ МОГО ПОВІДОМЛЕННЯ ---
+    function appendSentMessage(data) {
+        const row = document.createElement("div");
+        row.className = "message-row sent";
+        if (data.id) row.setAttribute('data-message-id', data.id);
+
+        const msg = document.createElement("div");
+        msg.className = "message sent";
+
+        if (data.content) {
+            const p = document.createElement("p");
+            p.textContent = data.content;
+            msg.appendChild(p);
+        }
+
+        const time = document.createElement("span");
+        time.className = "timestamp";
+        time.textContent = data.timestamp;
+        msg.appendChild(time);
+
+        const avatar = document.createElement("img");
+        avatar.src = currentUser.avatar;
+        avatar.className = "chat-avatar profile-trigger";
+
+        // Data attrs
+        avatar.dataset.username = currentUser.username;
+        avatar.dataset.avatarUrl = currentUser.avatar;
+        avatar.dataset.bio = currentUser.bio;
+        avatar.dataset.phone = currentUser.phone;
+        avatar.dataset.profileUrl = currentUser.url;
+
+        row.appendChild(msg);
+        row.appendChild(avatar);
+        messageList.appendChild(row);
+        scrollToBottom();
+        avatar.addEventListener("click", openProfilePopup);
+    }
+
+    // --- ФУНКЦІЯ МАЛЮВАННЯ ЧУЖОГО ПОВІДОМЛЕННЯ ---
+    function appendIncomingMessage(data) {
+        if (document.querySelector(`[data-message-id="${data.id}"]`)) return;
+
+        const row = document.createElement("div");
+        row.className = "message-row received";
         row.setAttribute('data-message-id', data.id);
+
+        const avatarImg = document.createElement("img");
+        avatarImg.src = data.avatar;
+        avatarImg.className = "chat-avatar profile-trigger";
+
+        avatarImg.dataset.username = data.sender;
+        avatarImg.dataset.avatarUrl = data.avatar;
+        avatarImg.dataset.bio = data.bio;
+        avatarImg.dataset.phone = data.phone;
+        avatarImg.dataset.profileUrl = data.profile_url;
+        avatarImg.addEventListener("click", openProfilePopup);
+
+        const msgDiv = document.createElement("div");
+        msgDiv.className = "message received";
+
+        const strong = document.createElement("strong");
+        strong.textContent = data.sender + ": ";
+        msgDiv.appendChild(strong);
+
+        if (data.content) {
+            const p = document.createElement("p");
+            p.textContent = data.content;
+            msgDiv.appendChild(p);
+        }
+
+        const timeSpan = document.createElement("span");
+        timeSpan.className = "timestamp";
+        timeSpan.textContent = data.timestamp;
+        msgDiv.appendChild(timeSpan);
+
+        row.appendChild(avatarImg);
+        row.appendChild(msgDiv);
+        messageList.appendChild(row);
+        scrollToBottom();
     }
-
-    // 2. ✅ ВИПРАВЛЕНО: Створюємо блок самого повідомлення (раніше його не було)
-    const msg = document.createElement("div");
-    msg.className = "message sent";
-
-    // 3. Наповнюємо контентом
-    if (data.content) {
-        const p = document.createElement("p");
-        p.textContent = data.content;
-        msg.appendChild(p);
-    }
-
-    // Додаємо час
-    const time = document.createElement("span");
-    time.className = "timestamp";
-    time.textContent = data.timestamp;
-    msg.appendChild(time);
-
-    // 4. Створюємо аватар
-    const avatar = document.createElement("img");
-    avatar.src = currentUser.avatar;
-    avatar.className = "chat-avatar profile-trigger";
-    avatar.alt = "Avatar";
-
-    // Присвоєння data-атрибутів для попапу профілю
-    avatar.dataset.username = currentUser.username;
-    avatar.dataset.avatarUrl = currentUser.avatar;
-    avatar.dataset.bio = currentUser.bio;
-    avatar.dataset.phone = currentUser.phone;
-    avatar.dataset.profileUrl = currentUser.url;
-
-    // 5. Збираємо все разом
-    row.appendChild(msg);    // Спочатку текст
-    row.appendChild(avatar); // Потім аватар (бо це sent)
-
-    // 6. Виводимо на екран
-    messageList.appendChild(row);
-    scrollToBottom();
-
-    // Додаємо обробник кліку на новому аватарі
-    avatar.addEventListener("click", openProfilePopup);
-}
 
     // ============================================================
-    // 2. ПОПАП ПРОФІЛЮ
+    // 4. ПОПАП ПРОФІЛЮ (Твій код)
     // ============================================================
     const profilePopup = document.getElementById("profilePopup");
     const closeProfileBtn = document.getElementById("closeProfileBtn");
-
     const popupAvatar = document.getElementById("popup-avatar");
     const popupUsername = document.getElementById("popup-username");
     const popupBio = document.getElementById("popup-bio");
@@ -292,7 +426,6 @@ function appendSentMessage(data) {
 
     function openProfilePopup(e) {
         const el = e.currentTarget;
-
         const bio = el.dataset.bio || "";
         const phone = el.dataset.phone || "";
 
@@ -302,10 +435,8 @@ function appendSentMessage(data) {
         popupPhone.textContent = phone;
         popupProfileLink.href = el.dataset.profileUrl;
 
-        // Показуємо/ховаємо блоки біо та телефону
         popupBioWrapper.style.display = bio ? "block" : "none";
         popupPhoneWrapper.style.display = phone ? "block" : "none";
-
         profilePopup.style.display = "flex";
     }
 
@@ -313,258 +444,16 @@ function appendSentMessage(data) {
         profilePopup.style.display = "none";
     }
 
-    // Додано обробники кліків для попапу
     closeProfileBtn.addEventListener("click", closeProfile);
     profilePopup.addEventListener("click", e => {
         if (e.target === profilePopup) closeProfile();
     });
 
-    document.querySelectorAll(".profile-trigger")
-        .forEach(el => el.addEventListener("click", openProfilePopup));
+    document.querySelectorAll(".profile-trigger").forEach(el => el.addEventListener("click", openProfilePopup));
 
-    // ============================================================
-    // 3. АВТОМАТИЧНА ВИСОТА ПОЛЯ ВВОДУ
-    // ============================================================
-    // ============================================================
-    // 3. АВТОМАТИЧНА ВИСОТА ПОЛЯ ВВОДУ + ВІДПРАВКА ПО ENTER
-    // ============================================================
-    function updateMessageInputHeight() {
-        messageInput.style.height = 'auto';
-        messageInput.style.height = (messageInput.scrollHeight) + 'px';
-        messageInput.style.paddingTop = "8px";
-    }
-
-    // Обробка ручного введення для автоматичної зміни висоти поля
-    messageInput.addEventListener('input', updateMessageInputHeight);
-
-    // 🚀 НОВА ЛОГІКА: ВІДПРАВКА ПОВІДОМЛЕННЯ ПРИ НАТИСКАННІ ENTER
-    messageInput.addEventListener('keydown', (e) => {
-        // Перевіряємо, чи була натиснута клавіша Enter
-        if (e.key === 'Enter') {
-
-            // Якщо натиснуто SHIFT+ENTER або CTRL+ENTER, ми дозволяємо
-            // стандартну поведінку (перехід на новий рядок)
-            if (e.shiftKey || e.ctrlKey) {
-                return;
-            }
-
-            // Якщо натиснуто просто Enter:
-            e.preventDefault(); // Забороняємо стандартну поведінку (новий рядок)
-
-            // Імітуємо клік по кнопці відправки, викликаючи submit у форми
-            if (messageInput.value.trim().length > 0) {
-                messageForm.dispatchEvent(new Event('submit'));
-            }
-        }
-    });
-
-    // ============================================================
-    // 4. ВІДПРАВКА ПОВІДОМЛЕННЯ (FIXED)
-    // ============================================================
-    if (messageForm) {
-        messageForm.addEventListener("submit", e => {
-            e.preventDefault();
-
-            const text = messageInput.value.trim();
-
-            // Перевірка: чи є текст
-            if (!text) return;
-
-            // Блокування кнопок
-            sendButton.disabled = true;
-            messageInput.disabled = true;
-
-            const fd = new FormData();
-            fd.append("content", text);
-            // CSRF токен можна передавати в тілі, але краще і в заголовках (див. нижче)
-            fd.append("csrfmiddlewaretoken", csrf);
-
-            fetch(`/my-chats/${chatId}/`, {
-                method: "POST",
-                headers: {
-                    // 🔥 КРИТИЧНО ВАЖЛИВО: Цей заголовок каже Django повернути JSON, а не HTML
-                    "X-Requested-With": "XMLHttpRequest",
-                    // Додаємо CSRF токен також у заголовок для надійності
-                    "X-CSRFToken": csrf
-                },
-                body: fd
-            })
-            .then(async response => {
-                // Спочатку перевіряємо, чи прийшов JSON
-                const contentType = response.headers.get("content-type");
-                if (contentType && contentType.indexOf("application/json") !== -1) {
-                    // Якщо це JSON — парсимо
-                    return response.json().then(data => {
-                        if (!response.ok) {
-                            // Якщо статус не 200, але це JSON (наприклад, validation error)
-                            return Promise.reject(data);
-                        }
-                        return data;
-                    });
-                } else {
-                    // Якщо прийшов HTML (помилка 500 або 404, або редірект)
-                    const text = await response.text();
-                    console.error("Сервер повернув не JSON:", text);
-                    throw new Error("Сервер повернув HTML замість JSON. Перевірте заголовки або лог сервера.");
-                }
-            })
-            .then(data => {
-                // Успішна відправка
-                if (data.status === "ok") {
-                    // Додаємо повідомлення (якщо у вас є функція appendSentMessage)
-                    // Якщо ви використовуєте WebSocket для відображення, цей рядок може бути не потрібен,
-                    // але для миттєвої реакції інтерфейсу можна залишити.
-                    if (typeof appendSentMessage === "function") {
-                        appendSentMessage(data);
-                    }
-
-                    messageInput.value = "";
-                    if (typeof updateMessageInputHeight === "function") {
-                        updateMessageInputHeight();
-                    }
-                } else {
-                    alert(`Помилка: ${data.message || 'Не вдалося відправити повідомлення.'}`);
-                }
-            })
-            .catch(err => {
-                console.error("Помилка при відправленні:", err);
-                // Якщо помилка прийшла від нашого Promise.reject(data)
-                if (err.message) {
-                     alert(`Помилка: ${err.message}`);
-                } else {
-                     alert("Сталася помилка при з'єднанні з сервером.");
-                }
-            })
-            .finally(() => {
-                // Розблокування кнопок
-                sendButton.disabled = false;
-                messageInput.disabled = false;
-                messageInput.focus();
-            });
-        });
-    }
-
-    // ============================================================
-    // 5. ДОДАТКОВІ КОНТРОЛЕРИ (Видалено)
-    // ============================================================
-
-    // ============================================================
-    // 6. ІНІЦІАЛІЗАЦІЯ
-    // ============================================================
-
+    // Ініціалізація
     scrollToBottom();
     updateMessageInputHeight();
-    // ==========================================
-    // ЛОГІКА ОТРИМАННЯ ПОВІДОМЛЕНЬ (REAL-TIME)
-    // ==========================================
-
-    // 1. Функція для малювання отриманого повідомлення
-    function appendIncomingMessage(data) {
-        // Перевірка, щоб не дублювати повідомлення
-        if (document.querySelector(`[data-message-id="${data.id}"]`)) return;
-
-        const row = document.createElement("div");
-        // Якщо це моє повідомлення (відкрите в іншій вкладці) -> sent, якщо чуже -> received
-        row.className = data.is_me ? "message-row sent" : "message-row received";
-        row.setAttribute('data-message-id', data.id);
-
-        // Створюємо аватар
-        const avatarImg = document.createElement("img");
-        avatarImg.src = data.avatar;
-        avatarImg.className = "chat-avatar profile-trigger";
-        // Дані для попапу
-        avatarImg.dataset.username = data.sender;
-        avatarImg.dataset.avatarUrl = data.avatar;
-        avatarImg.dataset.bio = data.bio;
-        avatarImg.dataset.phone = data.phone;
-        avatarImg.dataset.profileUrl = data.profile_url;
-
-        // Додаємо клік на аватар (щоб відкривав профіль)
-        avatarImg.addEventListener("click", openProfilePopup);
-
-        // Створюємо блок з текстом
-        const msgDiv = document.createElement("div");
-        msgDiv.className = data.is_me ? "message sent" : "message received";
-
-        // Ім'я (тільки для чужих)
-        if (!data.is_me) {
-            const strong = document.createElement("strong");
-            strong.textContent = data.sender + ": ";
-            msgDiv.appendChild(strong);
-        }
-
-        // Якщо є файл
-        if (data.file_url) {
-             const fileLink = document.createElement("a");
-             fileLink.href = data.file_url;
-             fileLink.target = "_blank";
-
-             if (/\.(jpg|jpeg|png|gif)$/i.test(data.file_name)) {
-                 const img = document.createElement("img");
-                 img.src = data.file_url;
-                 img.className = "chat-message-image";
-                 fileLink.appendChild(img);
-             } else {
-                 fileLink.className = "file-link";
-                 fileLink.innerHTML = `<i class="fas fa-file me-2"></i> [Файл: ${data.file_name}]`;
-             }
-             msgDiv.appendChild(fileLink);
-        }
-
-        // Текст повідомлення
-        if (data.content) {
-            const p = document.createElement("p");
-            p.textContent = data.content;
-            msgDiv.appendChild(p);
-        }
-
-        // Час
-        const timeSpan = document.createElement("span");
-        timeSpan.className = "timestamp";
-        timeSpan.textContent = data.timestamp;
-        msgDiv.appendChild(timeSpan);
-
-        // Збираємо структуру (порядок залежить від того, хто писав)
-        if (data.is_me) {
-            row.appendChild(msgDiv);
-            row.appendChild(avatarImg);
-        } else {
-            row.appendChild(avatarImg);
-            row.appendChild(msgDiv);
-        }
-
-        // Додаємо в чат
-        messageList.appendChild(row);
-        scrollToBottom();
-    }
-
-    // 2. Допоміжна функція: знайти ID останнього повідомлення
-    function getLastMessageId() {
-        const rows = document.querySelectorAll('.message-row');
-        if (rows.length === 0) return 0;
-        const lastRow = rows[rows.length - 1];
-        // Якщо атрибута немає, повертаємо 0
-        return lastRow.getAttribute('data-message-id') || 0;
-    }
-
-
-
-        // Звертаємося до API, яке ми прописали в api/urls.py
-        fetch(`/api/get_messages/${chatId}/?last_id=${lastId}`)
-            .then(response => {
-                if (!response.ok) return null;
-                return response.json();
-            })
-            .then(data => {
-                if (data && data.messages && data.messages.length > 0) {
-                    data.messages.forEach(msg => {
-                        appendIncomingMessage(msg);
-                    });
-                }
-            })
-            .catch(err => console.error("Chat update error:", err));
-
-    }, 2000);
 });
 </script>
 {% endblock %}

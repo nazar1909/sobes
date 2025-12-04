@@ -572,7 +572,6 @@ def chat_detail(request, chat_id):
     # =================================================================
     if request.method == 'GET':
         # 1. Позначаємо повідомлення в цьому чаті як прочитані.
-        # Це автоматично зменшить лічильник unread_notifications_count у шапці.
         ChatMessage.objects.filter(
             room=chat_room,
             is_read=False
@@ -581,7 +580,6 @@ def chat_detail(request, chat_id):
         ).update(is_read=True)
 
         # 2. Видаляємо старі записи Notification для цього чату/юзера.
-        # Це потрібно для чистоти бази, щоб не накопичувати сміття.
         if other_user:
             Notification.objects.filter(
                 recipient=request.user,
@@ -590,7 +588,7 @@ def chat_detail(request, chat_id):
             ).delete()
 
     # =================================================================
-    # 📨 ЛОГІКА ВІДПРАВКИ (POST запит)
+    # 📨 ЛОГІКА ВІДПРАВКИ (POST запит - Фоллбек та Файли)
     # =================================================================
     if request.method == 'POST':
         content = request.POST.get('content', '').strip()
@@ -608,7 +606,6 @@ def chat_detail(request, chat_id):
             # 2. Надсилаємо сповіщення через Channels (Redis)
             try:
                 channel_layer = get_channel_layer()
-                # Надсилаємо всім учасникам, крім себе
                 if other_user:
                     group_name = f"user_{other_user.id}_notifications"
 
@@ -616,9 +613,9 @@ def chat_detail(request, chat_id):
                         group_name,
                         {
                             'type': 'chat_notification',
-                            'message': f"{request.user.username} написав вам",  # Для тоста
-                            'sender': request.user.username,  # 🔥 ВАЖЛИВО: Для пошуку в списку чатів
-                            'content': message.content if message.content else '📷 Фото',  # 🔥 ВАЖЛИВО: Текст прев'ю
+                            'message': f"{request.user.username} написав вам",
+                            'sender': request.user.username,
+                            'content': message.content if message.content else '📷 Фото',
                         }
                     )
             except Exception as e:
@@ -649,10 +646,26 @@ def chat_detail(request, chat_id):
     # =================================================================
     messages = chat_room.messages.select_related('sender__profile').all().order_by('timestamp')
 
+    # --- 🔥 ДОДАНО: Генерація room_name для WebSockets (Consumers) ---
+    # Consumer очікує формат: "AdID-BuyerID"
+    # Нам треба визначити, хто в цьому чаті "покупець" (це той, хто не є власником оголошення)
+
+    ad_owner = chat_room.ad.user
+    # Шукаємо учасника, який не є власником оголошення
+    buyer = chat_room.participants.exclude(id=ad_owner.id).first()
+
+    # Якщо з якоїсь причини покупця не знайдено (наприклад, власник пише сам собі),
+    # використовуємо поточного юзера як покупця, щоб уникнути помилки.
+    buyer_id = buyer.id if buyer else request.user.id
+
+    room_name_json = f"{chat_room.ad.id}-{buyer_id}"
+    # -----------------------------------------------------------------
+
     return render(request, 'myapp/chat_detail.html', {
         'chat_room': chat_room,
         'messages': messages,
-        'other_user': other_user
+        'other_user': other_user,
+        'room_name_json': room_name_json,  # 🔥 Передаємо цей ключ у шаблон
     })
 
 @login_required
