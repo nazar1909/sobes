@@ -118,17 +118,17 @@ class ChatConsumer(AsyncWebsocketConsumer):
         }))
 
     async def disconnect(self, close_code):
-        # 1. ОБРОБКА ВИКЛЮЧЕННЯ:
-        # Ми перевіряємо, чи існує self.room_group_name, перш ніж намагатися його використати.
-        try:
-            if hasattr(self, 'room_group_name'):
+        # Перевіряємо, чи існує атрибут room_group_name у об'єкта self
+        if hasattr(self, 'room_group_name'):
+            # Обробка винятків на випадок, якщо Channels Layer не працює
+            try:
                 await self.channel_layer.group_discard(
                     self.room_group_name,
                     self.channel_name
                 )
-        except Exception as e:
-            # Тут можна логувати помилку, але головне - не дати Daphne впасти.
-            print(f"Помилка при відключенні: {e}")
+            except Exception as e:
+                # Це не повинно відбуватися, але ми захищаємося
+                print(f"Помилка при group_discard: {e}")
 
     async def receive(self, text_data):
         text_data_json = json.loads(text_data)
