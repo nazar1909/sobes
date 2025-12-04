@@ -23,7 +23,7 @@ def bool_env(name, default=False):
 # ==========================================
 # 2. БЕЗПЕКА (PRODUCTION)
 # ==========================================
-SECRET_KEY = get_env_variable("SECRET_KEY", "django-insecure-production-key-change-me")
+SECRET_KEY = 'django-insecure-FIXED-KEY-FOR-TESTING-123456789'
 
 # ВАЖЛИВО: На сервері DEBUG має бути False
 DEBUG = False
