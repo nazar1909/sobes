@@ -140,8 +140,10 @@ CHANNEL_LAYERS = {
         },
     },
 }
-
-CELERY_BROKER_URL = f"redis://{REDIS_HOST}:{REDIS_PORT}/0"
+# ==========================================
+# 7. CELERY (RabbitMQ + Redis Result)
+# ==========================================
+CELERY_BROKER_URL = 'amqp://user:user@127.0.0.1:5672/sobes_vhost'
 CELERY_RESULT_BACKEND = f"redis://{REDIS_HOST}:{REDIS_PORT}/0"
 CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
@@ -150,7 +152,7 @@ CELERY_TIMEZONE = 'UTC'
 CELERY_TASK_ALWAYS_EAGER = False
 
 # ==========================================
-# 7. СТАТИКА І МЕДІА (Nginx + Cloudinary)
+# 8. СТАТИКА І МЕДІА (Nginx + Cloudinary)
 # ==========================================
 STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
@@ -174,7 +176,7 @@ MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
 # ==========================================
-# 8. ІНШЕ
+# 9. ІНШЕ
 # ==========================================
 REST_FRAMEWORK = {
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
