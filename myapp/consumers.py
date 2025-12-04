@@ -213,10 +213,13 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
 class NotificationConsumer(AsyncWebsocketConsumer):
     async def connect(self):
+        print(f"DEBUG: CONNECTING... Headers: {self.scope.get('headers')}")
         self.user = self.scope['user']
+        print(f"DEBUG: User found: {self.user} (Is Auth: {self.user.is_authenticated})")
 
         # 🔥 ВИПРАВЛЕННЯ: Перевірка авторизації для сповіщень
         if not self.user.is_authenticated:
+            print("DEBUG: REJECTING ANONYMOUS")
             await self.close()
             return
 
