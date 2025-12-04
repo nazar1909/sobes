@@ -2,6 +2,11 @@ import json
 from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.db import database_sync_to_async
 from django.contrib.auth import get_user_model
+from .models import ChatMessage  # локальний імпорт
+from .models import AD, ChatRoom  # локальний імпорт
+from .models import ChatMessage
+from .models import Profile  # локальний імпорт
+from .models import Notification
 
 
 
@@ -9,7 +14,6 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
     @database_sync_to_async
     def get_user_avatar_url(self, user):
-        from .models import Profile  # локальний імпорт
         try:
             if hasattr(user, 'profile') and user.profile.image and user.profile.image.url:
                 return user.profile.image.url
@@ -19,7 +23,6 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
     @database_sync_to_async
     def get_chat_history(self, room):
-        from .models import ChatMessage  # локальний імпорт
         messages = ChatMessage.objects.filter(room=room).select_related('sender__profile').order_by('-timestamp')[:50]
         result = []
         for msg in reversed(messages):
@@ -39,7 +42,6 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
     @database_sync_to_async
     def get_or_create_room(self):
-        from .models import AD, ChatRoom  # локальний імпорт
         ad = AD.objects.get(id=self.ad_id)
         buyer =  get_user_model().objects.get(id=self.buyer_id)
 
@@ -56,7 +58,6 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
     @database_sync_to_async
     def save_message(self, room, user, content):
-        from .models import ChatMessage
         return ChatMessage.objects.create(room=room, sender=user, content=content)
 
     @database_sync_to_async
@@ -65,7 +66,6 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
     @database_sync_to_async
     def create_notification(self, recipient, message):
-        from .models import Notification
         return Notification.objects.create(
             recipient=recipient,
             sender=self.user,
@@ -80,13 +80,15 @@ class ChatConsumer(AsyncWebsocketConsumer):
             await self.close()
             return
 
+        # 1. ІНІЦІАЛІЗАЦІЯ ОБОВ'ЯЗКОВИХ ЗМІННИХ ОДРАЗУ!
         self.room_name = self.scope['url_route']['kwargs']['room_name']
-        self.room_group_name = f'chat_{self.room_name}'
+        self.room_group_name = f'chat_{self.room_name}'  # Тепер ця змінна точно існує!
 
         if '-' not in self.room_name:
             await self.close()
             return
 
+        # 2. Перевірка та ініціалізація AD/BUYER
         try:
             ad, buyer = self.room_name.split('-')
             self.ad_id = int(ad)
@@ -95,15 +97,19 @@ class ChatConsumer(AsyncWebsocketConsumer):
             await self.close()
             return
 
-        self.room = await self.get_or_create_room()
+        # 3. Приймаємо з'єднання (це має бути якомога раніше)
+        await self.accept()  # <-- Підтверджуємо, що ми готові
 
+        # 4. DB-логіка, яка може бути повільною:
+        self.room = await self.get_or_create_room()
         allowed = await self.check_access(self.room, self.user)
+
         if not allowed:
-            await self.close()
+            # Закриваємо з кодом 4003 (доступу немає)
+            await self.close(code=4003)
             return
 
         await self.channel_layer.group_add(self.room_group_name, self.channel_name)
-        await self.accept()
 
         history = await self.get_chat_history(self.room)
         await self.send(text_data=json.dumps({
