@@ -1,37 +1,26 @@
-from pathlib import Path
 import os
+from pathlib import Path
 from django.core.exceptions import ImproperlyConfigured
-from distutils.util import strtobool
 from dotenv import load_dotenv
-
 
 # Завантаження змінних
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 load_dotenv(BASE_DIR / ".env")
 
-
 # ======== Helpers ========
-def get_env_variable(name, default=None, required=False):
-    val = os.environ.get(name, default)
-    if required and val is None:
-        raise ImproperlyConfigured(f"Environment variable '{name}' is required")
-    return val
-
+def get_env_variable(name, default=None):
+    return os.environ.get(name, default)
 
 def bool_env(name, default=False):
     val = os.environ.get(name, str(default))
-    try:
-        return bool(strtobool(val))
-    except Exception:
-        return str(val).lower() in ("1", "true", "yes", "on")
-
+    return str(val).lower() in ("1", "true", "yes", "on")
 
 # ======== Core ========
-SECRET_KEY = get_env_variable("SECRET_KEY", "django-insecure-PLACEHOLDER")
-DEBUG = bool_env("DEBUG", default=False)
+SECRET_KEY = get_env_variable("SECRET_KEY", "django-insecure-dev-key")
+DEBUG = True # Локально True
 
-ALLOWED_HOSTS = []
-CORS_ALLOW_ALL_ORIGINS = bool_env("CORS_ALLOW_ALL_ORIGINS", default=False)
+ALLOWED_HOSTS = ["*"]
+CORS_ALLOW_ALL_ORIGINS = True
 
 # ======== Apps ========
 INSTALLED_APPS = [
@@ -44,11 +33,9 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
 
-    # ВАЖЛИВО: cloudinary_storage має бути вище, ніж staticfiles
     'cloudinary_storage',
     'django.contrib.staticfiles',
 
-    # Third-party
     'corsheaders',
     'widget_tweaks',
     'wait_for_db_app',
@@ -58,38 +45,18 @@ INSTALLED_APPS = [
     'drf_spectacular',
 ]
 
-# ======== REST Framework ========
-REST_FRAMEWORK = {
-    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
-    'DEFAULT_AUTHENTICATION_CLASSES': (
-        'rest_framework_simplejwt.authentication.JWTAuthentication',
-        'rest_framework.authentication.SessionAuthentication',
-    ),
-    'DEFAULT_PERMISSION_CLASSES': (
-        'rest_framework.permissions.AllowAny',
-    ),
-    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.LimitOffsetPagination',
-    'PAGE_SIZE': 12,
-}
-
-SPECTACULAR_SETTINGS = {
-    'TITLE': 'Sobes API',
-    'DESCRIPTION': 'API для OLX-like застосунку',
-    'VERSION': '1.0.0',
-}
-
 # ======== Middleware ========
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
-    'whitenoise.middleware.WhiteNoiseMiddleware', # WhiteNoise має бути тут
+    'whitenoise.middleware.WhiteNoiseMiddleware', # Локально WhiteNoise зручний
     'django.contrib.sessions.middleware.SessionMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
-
 
 ROOT_URLCONF = 'sobes.urls'
 
@@ -109,84 +76,47 @@ TEMPLATES = [
     },
 ]
 
+WSGI_APPLICATION = 'sobes.wsgi.application'
 ASGI_APPLICATION = 'sobes.asgi.application'
 
-# ======== Static Files (WhiteNoise) ========
-# ВАЖЛИВО: STATIC_URL має бути визначений у BASE
+# ======== Static Files ========
 STATIC_URL = '/static/'
-
-# Використовуємо pathlib для надійності
-STATICFILES_DIRS = [
-    BASE_DIR / 'static',
-]
-
+STATICFILES_DIRS = [BASE_DIR / 'static']
 STATIC_ROOT = BASE_DIR / 'staticfiles'
-
-# WhiteNoise налаштування
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedStaticFilesStorage'
 
-# ======== Cloudinary / Media Configuration ========
-CLOUDINARY_URL = os.environ.get('CLOUDINARY_URL')
+# ======== Cloudinary ========
+# Ті самі ключі
+CLOUDINARY_STORAGE = {
+    'CLOUD_NAME': 'dhact88gj',
+    'API_KEY': '633531725433543',
+    'API_SECRET': '1U31LQvhjYxWljoN8tBIx-i36hI'
+}
+DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media'
 
-if CLOUDINARY_URL:
-    try:
-        raw_config = CLOUDINARY_URL.replace('cloudinary://', '')
-        creds, cloud_name = raw_config.split('@')
-        api_key, api_secret = creds.split(':')
+# ======== Database ========
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.sqlite3', # Локально можна SQLite
+        'NAME': BASE_DIR / 'db.sqlite3',
+    }
+}
 
-        CLOUDINARY_STORAGE = {
-            'CLOUD_NAME': 'dhact88gj',
-            'API_KEY': '633531725433543',
-            'API_SECRET': '1U31LQvhjYxWljoN8tBIx-i36hI',
-        }
-
-        DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
-        MEDIA_URL = f'https://res.cloudinary.com/{cloud_name}/image/upload/'
-
-        print(f"✅ Cloudinary successfully configured for cloud: {cloud_name}")
-
-    except Exception as e:
-        print(f"❌ Error parsing CLOUDINARY_URL: {e}")
-        MEDIA_URL = '/media/'
-        MEDIA_ROOT = BASE_DIR / 'media'
-else:
-    cloud_name = os.environ.get('CLOUDINARY_CLOUD_NAME')
-    if cloud_name:
-        CLOUDINARY_STORAGE = {
-            'CLOUD_NAME': cloud_name,
-            'API_KEY': os.environ.get('CLOUDINARY_API_KEY'),
-            'API_SECRET': os.environ.get('CLOUDINARY_API_SECRET'),
-        }
-        DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
-        MEDIA_URL = f'https://res.cloudinary.com/{cloud_name}/image/upload/'
-    else:
-        print("⚠️ No Cloudinary config found. Using local storage.")
-        MEDIA_URL = '/media/'
-        MEDIA_ROOT = BASE_DIR / 'media'
-
-# ======== General ========
+# ======== Others ========
 LANGUAGE_CODE = 'en-us'
 TIME_ZONE = 'UTC'
 USE_I18N = True
 USE_TZ = True
-
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
-
 LOGIN_REDIRECT_URL = 'home'
 LOGOUT_REDIRECT_URL = 'login'
 LOGIN_URL = 'login'
 
-# ======== Email ========
-EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
-EMAIL_HOST = "smtp.gmail.com"
-EMAIL_PORT = 587
-EMAIL_USE_TLS = True
-EMAIL_HOST_USER = "Nazarshylo2005@gmail.com"
-EMAIL_HOST_PASSWORD = "yyhd onkt maud cvdz"
-DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
-
-# ======== Celery defaults ========
-CELERY_ACCEPT_CONTENT = ['json']
-CELERY_TASK_SERIALIZER = 'json'
-CELERY_RESULT_SERIALIZER = 'json'
-CELERY_TIMEZONE = 'UTC'
+# REST
+REST_FRAMEWORK = {
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+    'DEFAULT_PERMISSION_CLASSES': ('rest_framework.permissions.AllowAny',),
+    'PAGE_SIZE': 12,
+}

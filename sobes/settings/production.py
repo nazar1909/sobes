@@ -3,24 +3,29 @@ from pathlib import Path
 import dj_database_url
 from django.core.exceptions import ImproperlyConfigured
 from dotenv import load_dotenv
+
 # ==========================================
 # 1. ОСНОВНІ ШЛЯХИ ТА ЗМІННІ
 # ==========================================
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 load_dotenv(BASE_DIR / ".env")
 
+
 def get_env_variable(name, default=None):
     return os.environ.get(name, default)
 
-# Виправлена функція (без distutils) для Python 3.12
+
 def bool_env(name, default=False):
     val = os.environ.get(name, str(default))
     return str(val).lower() in ("1", "true", "yes", "on")
 
+
 # ==========================================
-# 2. БЕЗПЕКА
+# 2. БЕЗПЕКА (PRODUCTION)
 # ==========================================
 SECRET_KEY = get_env_variable("SECRET_KEY", "django-insecure-production-key-change-me")
+
+# ВАЖЛИВО: На сервері DEBUG має бути False
 DEBUG = False
 
 ALLOWED_HOSTS = ["127.0.0.1", "localhost", "193.56.151.227", "sobes-prod-production.up.railway.app", "*"]
@@ -45,13 +50,16 @@ INSTALLED_APPS = [
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
+
+    # Cloudinary має бути перед staticfiles
     'cloudinary_storage',
     'django.contrib.staticfiles',
+
     'corsheaders',
     'widget_tweaks',
     'wait_for_db_app',
     'django_celery_results',
-    #'cloudinary',
+    'cloudinary',  # Додаємо сам додаток, але не імпортуємо його в шапці
     'rest_framework',
     'drf_spectacular',
 ]
@@ -61,7 +69,7 @@ INSTALLED_APPS = [
 # ==========================================
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
-    #'whitenoise.middleware.WhiteNoiseMiddleware', # Вимкнено для Nginx
+    # 'whitenoise.middleware.WhiteNoiseMiddleware', # ВИМКНЕНО для Nginx
     'django.contrib.sessions.middleware.SessionMiddleware',
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -145,31 +153,24 @@ CELERY_TIMEZONE = 'UTC'
 CELERY_TASK_ALWAYS_EAGER = False
 
 # ==========================================
-# 7. СТАТИКА І МЕДІА
-# ==========================================
-# ==========================================
-# 7. СТАТИКА (ВИПРАВЛЕНО)
+# 7. СТАТИКА І МЕДІА (Nginx + Cloudinary)
 # ==========================================
 STATIC_URL = '/static/'
-
-# Куди збирати файли (для Nginx)
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 
-# Звідки брати файли (твоя папка з CSS)
 STATICFILES_DIRS = [
     BASE_DIR / 'static',
 ]
 
-# Важливо: Статику - локально, Медіа - в хмару
+# Використовуємо стандартне сховище, бо статику роздає Nginx
 STATICFILES_STORAGE = 'django.contrib.staticfiles.storage.StaticFilesStorage'
-# Cloudinary налаштування (залишаємо як є)
-CLOUDINARY_URL = os.environ.get('CLOUDINARY_URL')
-if not CLOUDINARY_URL:
-    CLOUDINARY_STORAGE = {
-        'CLOUD_NAME': 'dhact88gj',
-        'API_KEY': '633531725433543',
-        'API_SECRET': '1U31LQvhjYxWljoN8tBIx-i36hI'
-    }
+
+# Налаштування Cloudinary (Словником, щоб уникнути імпортів)
+CLOUDINARY_STORAGE = {
+    'CLOUD_NAME': 'dhact88gj',
+    'API_KEY': '633531725433543',
+    'API_SECRET': '1U31LQvhjYxWljoN8tBIx-i36hI'
+}
 
 DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
 MEDIA_URL = '/media/'
