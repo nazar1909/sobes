@@ -16,7 +16,7 @@ def bool_env(name, default=False):
     return str(val).lower() in ("1", "true", "yes", "on")
 
 # ======== Core ========
-SECRET_KEY = get_env_variable("SECRET_KEY", "django-insecure-dev-key")
+SECRET_KEY = 'django-insecure-FIXED-KEY-FOR-TESTING-123456789'
 DEBUG = True # Локально True
 
 ALLOWED_HOSTS = ["*"]
