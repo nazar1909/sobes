@@ -24,7 +24,13 @@ def bool_env(name, default=False):
 # 2. БЕЗПЕКА (PRODUCTION)
 # ==========================================
 SECRET_KEY = 'django-insecure-FIXED-KEY-FOR-TESTING-123456789'
+# --- НОВІ НАЛАШТУВАННЯ СЕСІЇ ---
+# 1. Міняємо ім'я, щоб старі куки ігнорувалися
+SESSION_COOKIE_NAME = 'sobes_session_v2'
 
+# 2. Переконуємося, що движок сесій - стандартний (база даних)
+# (Redis іноді глючить з сесіями, якщо версії не співпадають)
+SESSION_ENGINE = 'django.contrib.sessions.backends.db'
 # ВАЖЛИВО: На сервері DEBUG має бути False
 DEBUG = False
 

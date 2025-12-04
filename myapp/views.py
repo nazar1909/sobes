@@ -156,6 +156,7 @@ def ad_detail(request, slug):
         # 🔥 ГОЛОВНЕ ВИПРАВЛЕННЯ:
         "room_name": room_name,
     })
+@login_required
 def favorite_ads(request):
     ads = request.user.favorite_ads.all().prefetch_related('images')  # ✅ Правильно
     return render(request, 'myapp/favorite_ads.html', {'ads': ads}) # ✅ Правильно передана змінна 'ads'
