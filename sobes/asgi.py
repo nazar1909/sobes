@@ -12,7 +12,7 @@ django.setup()
 # 3. Тільки ТЕПЕР імпортуємо WebSockets і роутинг
 from channels.routing import ProtocolTypeRouter, URLRouter
 from channels.auth import AuthMiddlewareStack
-#from channels.security.websocket import AllowedHostsOriginValidator
+from channels.security.websocket import AllowedHostsOriginValidator
 from myapp.routing import websocket_urlpatterns
 
 # 4. Збираємо все разом
