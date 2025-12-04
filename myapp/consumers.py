@@ -19,7 +19,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 return user.profile.image.url
         except Exception:
             pass
-        return '/static/media/images/placeholder.png'  # Краще використовувати абсолютний шлях або статичний URL
+        return '/static/images/placeholder.png'  # Краще використовувати абсолютний шлях або статичний URL
 
     @database_sync_to_async
     def get_chat_history(self, room):
