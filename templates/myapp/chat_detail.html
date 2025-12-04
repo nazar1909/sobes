@@ -3,7 +3,7 @@
 
 {% block content %}
 <script id="chat-script"
-        data-chat-id="{{ chat_room.id }}"
+        data-chat-id="{{ room_name_json }}"
         data-user-avatar="{% if request.user.profile.image %}{{ request.user.profile.image.url }}{% else %}{% static 'images/placeholder.png' %}{% endif %}"
         defer>
     // Сюди буде вставлений ваш JavaScript
