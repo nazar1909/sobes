@@ -547,9 +547,7 @@ function appendSentMessage(data) {
         return lastRow.getAttribute('data-message-id') || 0;
     }
 
-    // 3. ЗАПУСК ТАЙМЕРА (Кожні 2 секунди)
-    setInterval(() => {
-        const lastId = getLastMessageId();
+
 
         // Звертаємося до API, яке ми прописали в api/urls.py
         fetch(`/api/get_messages/${chatId}/?last_id=${lastId}`)
