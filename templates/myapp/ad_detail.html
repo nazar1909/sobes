@@ -155,7 +155,7 @@
             <h5 class="card-title h6 mb-3"><i class="fa-solid fa-user"></i> Профіль продавця</h5>
             <a href="{% url 'public_profile' username=ad.user.username %}" class="text-decoration-none text-dark">
                 <div class="seller-info">
-                  <img src="{{ ad.user.profile.image.url|default:'/static/media/images/placeholder.png' }}" class="seller-avatar" alt="Фото продавця">
+                  <img src="{{ ad.user.profile.image.url|default:'/static/images/placeholder.png' }}" class="seller-avatar" alt="Фото продавця">
                   <p class="seller-name mt-2">{{ ad.user.username }}</p>
                 </div>
             </a>
@@ -228,7 +228,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const messageRow = document.createElement('div');
             messageRow.classList.add('message-row');
             const isMe = username === '{{ request.user.username }}';
-            const avatar = avatar_url || '/static/media/images/placeholder.png';
+            const avatar = avatar_url || '/static/images/placeholder.png';
 
             messageRow.classList.add(isMe ? 'my-message' : 'their-message');
             let bubbleContent = message;

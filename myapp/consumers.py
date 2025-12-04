@@ -30,7 +30,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
         messages = ChatMessage.objects.filter(room=room).select_related('sender__profile').order_by('-timestamp')[:50]
         result = []
         for msg in reversed(messages):
-            avatar = '/static/media/images/placeholder.png'
+            avatar = '/static/images/placeholder.png'
             try:
                 if hasattr(msg.sender, 'profile') and msg.sender.profile.image:
                     avatar = msg.sender.profile.image.url
