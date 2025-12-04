@@ -135,9 +135,9 @@ if CLOUDINARY_URL:
         api_key, api_secret = creds.split(':')
 
         CLOUDINARY_STORAGE = {
-            'CLOUD_NAME': cloud_name,
-            'API_KEY': api_key,
-            'API_SECRET': api_secret,
+            'CLOUD_NAME': 'dhact88gj',
+            'API_KEY': '633531725433543',
+            'API_SECRET': '1U31LQvhjYxWljoN8tBIx-i36hI',
         }
 
         DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
