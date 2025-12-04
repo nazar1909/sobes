@@ -225,41 +225,54 @@ document.addEventListener("DOMContentLoaded", () => {
     chatSocket.onmessage = function(e) {
         const data = JSON.parse(e.data);
 
+        // 🛠️ ДОПОМІЖНА ЛОГІКА ДЛЯ АВАТАРОК
+        // Ми визначаємо правильний аватар тут, щоб не залежати від того, що прислав сокет
+        function getCorrectAvatar(isMe) {
+            return isMe ? currentUser.avatar : otherUser.avatar;
+        }
+
         // A. Історія повідомлень (приходить при підключенні)
         if (data.type === 'chat_history' && data.messages) {
             messageList.innerHTML = ''; // Чистимо список
             data.messages.forEach(msg => {
                 const isMe = msg.username === currentUser.username;
+
                 const msgData = {
                     id: Date.now() + Math.random(),
                     is_me: isMe,
                     sender: msg.username,
-                    avatar: msg.avatar_url,
+
+                    // 🔥 ВИПРАВЛЕННЯ: Беремо наш правильний аватар, а не msg.avatar_url
+                    avatar: getCorrectAvatar(isMe),
+
                     content: msg.message,
                     timestamp: msg.timestamp,
-                    // Додаткові поля для попапу
+                    // Додаткові поля
                     bio: isMe ? currentUser.bio : otherUser.bio,
                     phone: isMe ? currentUser.phone : otherUser.phone,
                     profile_url: isMe ? currentUser.url : otherUser.url
                 };
+
                 if (isMe) appendSentMessage(msgData);
                 else appendIncomingMessage(msgData);
             });
             scrollToBottom();
         }
 
-        // B. Нове повідомлення
-        else if (data.type === 'new_message' || (data.message && data.username)) {
+        // B. Нове повідомлення (у реальному часі)
+        else if (data.type === 'new_message') {
             const isMe = data.username === currentUser.username;
 
-            // Якщо це повідомлення від мене - ми його вже намалювали (оптимістично),
-            // тому малюємо тільки якщо це ЧУЖЕ повідомлення.
+            // Малюємо тільки ЧУЖІ повідомлення (свої ми вже намалювали при відправці)
             if (!isMe) {
                 const msgData = {
                     id: Date.now(),
                     is_me: false,
                     sender: data.username,
-                    avatar: data.avatar_url || otherUser.avatar,
+
+                    // 🔥 ВИПРАВЛЕННЯ: Тут теж форсуємо аватар співрозмовника
+                    avatar: otherUser.avatar,
+
                     content: data.message,
                     timestamp: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
                     bio: otherUser.bio,
